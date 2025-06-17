@@ -66,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Email Field
                       TextField(
                         style: const TextStyle(
-                          color: Color(0xFFF67F00), // input text color
+                          color: Color(0xFFBD2D01), // input text color
                         ),
                         decoration: InputDecoration(
                           hintText: 'Email or username',
@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextField(
                         obscureText: _obscureText,
                         style: const TextStyle(
-                          color: Color(0xFFF67F00), // input text color
+                          color: Color(0xFFBD2D01), // input text color
                         ),
                         decoration: InputDecoration(
                           hintText: 'Password',
@@ -120,12 +120,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       Align(
                         alignment: Alignment.centerRight,
-                        child: Text(
-                          'Forget Password?',
-                          style: TextStyle(
-                            color: const Color(0xFFBD2D01),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/forgot');
+                          },
+                          child: const Text(
+                            'Forget Password?',
+                            style: TextStyle(
+                              color: Color(0xFFBD2D01),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                       ),

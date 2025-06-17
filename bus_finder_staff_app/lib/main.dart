@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'screens/login_screen.dart'; // Make sure this file exists
+import 'screens/login_screen.dart';
+import 'screens/forgot_password_screen.dart';
+import 'screens/email_verification_screen.dart';
+import 'screens/reset_password_screen.dart';
 
 void main() {
   runApp(const BusFinderApp());
@@ -18,6 +21,12 @@ class BusFinderApp extends StatelessWidget {
         fontFamily: 'Roboto',
       ),
       home: const SplashScreen(),
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/forgot': (context) => const ForgotPasswordScreen(),
+        '/verify': (context) => const EmailVerificationScreen(),
+        '/reset': (context) => const ResetPasswordScreen(),
+      },
     );
   }
 }
@@ -33,10 +42,8 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 3), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+    Timer(const Duration(seconds: 10), () {
+      Navigator.pushReplacementNamed(context, '/login');
     });
   }
 
@@ -52,11 +59,11 @@ class _SplashScreenState extends State<SplashScreen> {
             end: Alignment.bottomRight,
             stops: [0.0, 0.1, 0.5, 0.9, 1.0],
             colors: [
-              Color(0xFFBD2D01), // 0%
-              Color(0xFFCF4602), // 10%
-              Color(0xFFF67F00), // 50%
-              Color(0xFFCF4602), // 90%
-              Color(0xFFBD2D01), // 100%
+              Color(0xFFBD2D01),
+              Color(0xFFCF4602),
+              Color(0xFFF67F00),
+              Color(0xFFCF4602),
+              Color(0xFFBD2D01),
             ],
           ),
         ),
