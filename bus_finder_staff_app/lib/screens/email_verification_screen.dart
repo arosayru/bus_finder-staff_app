@@ -49,10 +49,20 @@ class EmailVerificationScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Divider(
-                    thickness: 1,
+                  Container(
                     height: 1,
-                    color: Colors.black54,
+                    margin: const EdgeInsets.only(top: 2),
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 2,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                      color: Colors.black54,
+                    ),
                   ),
                 ],
               ),
