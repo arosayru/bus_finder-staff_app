@@ -35,27 +35,40 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Back Button and Title
-              Padding(
-                padding: const EdgeInsets.only(left: 10.0, top: 10.0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
+              // Back Button and Title with Divider
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 10.0, top: 10.0),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        const Text(
+                          "Reset Password",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
-                    const Text(
-                      "Reset Password",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  const Divider(
+                    thickness: 1,
+                    height: 1,
+                    color: Colors.black54,
+                  ),
+                ],
               ),
+
               const Spacer(),
+
+              // Form card
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 30),
                 padding: const EdgeInsets.all(20),
@@ -204,6 +217,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   ],
                 ),
               ),
+
               const Spacer(flex: 2),
             ],
           ),

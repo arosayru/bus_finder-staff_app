@@ -26,26 +26,37 @@ class EmailVerificationScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              // Back Button and Title
-              Padding(
-                padding: const EdgeInsets.only(left: 10.0, top: 10.0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
+              // Back Button and Title with divider
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 10.0, top: 10.0),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        const Text(
+                          "Email Verification",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
-                    const Text(
-                      "Email Verification",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  const Divider(
+                    thickness: 1,
+                    height: 1,
+                    color: Colors.black54,
+                  ),
+                ],
               ),
+
               const Spacer(),
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 30),
@@ -110,13 +121,11 @@ class EmailVerificationScreen extends StatelessWidget {
                               color: Color(0xFFBD2D01),
                               fontWeight: FontWeight.bold,
                             ),
-                            // TODO: Add resend functionality
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // Verify and Proceed Button
                     SizedBox(
                       width: double.infinity,
                       height: 45,
