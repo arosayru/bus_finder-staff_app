@@ -27,26 +27,40 @@ class ForgotPasswordScreen extends StatelessWidget {
           child: Column(
             children: [
               // AppBar-like back button and title
-              Padding(
-                padding: const EdgeInsets.only(left: 10.0, top: 10.0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 10.0, top: 10.0),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        const Text(
+                          "Forgot Password",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
-                    const Text(
-                      "Forgot Password",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  // Line below the title
+                  const Divider(
+                    thickness: 1,
+                    height: 1,
+                    color: Colors.black54,
+                  ),
+                ],
               ),
+
               const Spacer(),
+
+              // Form Card
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 30),
                 padding: const EdgeInsets.all(20),
@@ -96,6 +110,7 @@ class ForgotPasswordScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 20),
+
                     // Recover Password Button
                     SizedBox(
                       width: double.infinity,
@@ -141,6 +156,7 @@ class ForgotPasswordScreen extends StatelessWidget {
                   ],
                 ),
               ),
+
               const Spacer(flex: 2),
             ],
           ),
