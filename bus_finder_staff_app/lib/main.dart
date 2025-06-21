@@ -6,6 +6,7 @@ import 'screens/email_verification_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/route_management_screen.dart';
+import 'screens/shift_tracker_screen.dart';
 
 void main() {
   runApp(const BusFinderApp());
@@ -30,6 +31,7 @@ class BusFinderApp extends StatelessWidget {
         '/reset': (context) => const ResetPasswordScreen(),
         '/dashboard': (context) => const DashboardScreen(),
         'route-management': (context) => const RouteManagementScreen(),
+        'shift-tracker': (context) => const ShiftTrackerScreen(),
       },
     );
   }

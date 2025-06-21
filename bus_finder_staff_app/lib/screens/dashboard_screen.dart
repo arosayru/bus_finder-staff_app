@@ -141,7 +141,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 _buildFeatureCard("Route\nManagement", () {
                                   Navigator.pushNamed(context, 'route-management');
                                 }),
-                                _buildFeatureCard("Shift\nTracker", () {}),
+                                _buildFeatureCard("Shift\nTracker", () {
+                                  Navigator.pushNamed(context, 'shift-tracker');
+                                }),
                                 _buildFeatureCard("Bus\nCapacity", () {}),
                                 _buildFeatureCard("Report\nIssue", () {}),
                               ],
