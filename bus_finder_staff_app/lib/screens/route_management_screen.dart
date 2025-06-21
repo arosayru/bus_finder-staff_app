@@ -17,8 +17,28 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
       'distance': '93.4km',
       'departureTime': '6.10 a.m',
       'arrivalTime': '8.40 a.m',
+      'stops': [
+        'Kurunegala',
+        'Polgahawela',
+        'Alawwa',
+        'Warakapola',
+        'Nittambuwa',
+        'Yakkala',
+        'Kadawatha',
+        'Peliyagoda',
+        'Colombo',
+      ]
     };
   });
+
+  // Maintain expansion state for each item
+  List<bool> expanded = [];
+
+  @override
+  void initState() {
+    super.initState();
+    expanded = List.filled(routes.length, false); // initially all collapsed
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,19 +46,17 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
       backgroundColor: const Color(0xFFF5F5F5),
       body: Column(
         children: [
-          // Custom AppBar
+          // Top Bar
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 22),
             decoration: const BoxDecoration(
               color: Color(0xFFFB9933),
             ),
             child: Row(
               children: [
                 GestureDetector(
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
+                  onTap: () => Navigator.pop(context),
                   child: const Icon(Icons.arrow_back, color: Colors.white),
                 ),
                 const SizedBox(width: 12),
@@ -63,6 +81,8 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
               itemCount: routes.length,
               itemBuilder: (context, index) {
                 final route = routes[index];
+                final isOpen = expanded[index];
+
                 return Container(
                   margin: const EdgeInsets.only(bottom: 16),
                   padding: const EdgeInsets.all(12),
@@ -77,33 +97,102 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
                       ),
                     ],
                   ),
-                  child: Row(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Padding(
-                        padding: EdgeInsets.only(right: 10, top: 4),
-                        child: Icon(Icons.directions_bus, size: 30),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              route['number'],
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
+                      // Header row
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(right: 10, top: 4),
+                            child: Icon(Icons.directions_bus, size: 30),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  route['number'],
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                _buildDetailLine('Route Name:', route['routeName']),
+                                _buildDetailLine('Departure Time:', route['departureTime']),
+                                _buildDetailLine('Arrival Time:', route['arrivalTime']),
+                                _buildDetailLine('Travel Time:', route['travelTime']),
+                                _buildDetailLine('Distance:', route['distance']),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            _buildDetailLine('Route Name:', route['routeName']),
-                            _buildDetailLine('Travel Time:', route['travelTime']),
-                            _buildDetailLine('Distance:', route['distance']),
-                            _buildDetailLine('Departure Time:', route['departureTime']),
-                            _buildDetailLine('Arrival Time:', route['arrivalTime']),
-                          ],
-                        ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                expanded[index] = !expanded[index];
+                              });
+                            },
+                            child: Icon(
+                              isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                            ),
+                          ),
+                        ],
                       ),
-                      const Icon(Icons.keyboard_arrow_down_rounded),
+
+                      // Expanded Stop List
+                      if (isOpen) ...[
+                        const SizedBox(height: 10),
+                        const Text(
+                          "Route:",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Column(
+                          children: List.generate(route['stops'].length, (i) {
+                            final isFirst = i == 0;
+                            final isLast = i == route['stops'].length - 1;
+
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Column(
+                                  children: [
+                                    if (!isFirst)
+                                      Container(
+                                        height: 8,
+                                        width: 2,
+                                        color: Colors.grey,
+                                      ),
+                                    Icon(
+                                      isLast ? Icons.location_on : Icons.radio_button_checked,
+                                      color: isLast ? Colors.red : Colors.orange,
+                                      size: 18,
+                                    ),
+                                    if (!isLast)
+                                      Container(
+                                        height: 20,
+                                        width: 2,
+                                        color: Colors.grey,
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(width: 10),
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    route['stops'][i],
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }),
+                        ),
+                      ]
                     ],
                   ),
                 );
