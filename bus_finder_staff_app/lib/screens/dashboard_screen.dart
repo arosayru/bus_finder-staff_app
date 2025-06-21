@@ -9,6 +9,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool isGpsEnabled = false;
+  int currentIndex = 0;
 
   String getGreetingMessage() {
     final hour = DateTime.now().hour;
@@ -24,18 +25,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Orange header background
             Container(
               height: 160,
               decoration: const BoxDecoration(
                 color: Color(0xFFFB9933),
               ),
             ),
-
-            // Main white content area
             Column(
               children: [
-                // Header Row
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                   child: Row(
@@ -69,8 +66,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                 ),
-
-                // White section
                 Expanded(
                   child: Container(
                     width: double.infinity,
@@ -84,7 +79,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     child: Column(
                       children: [
-                        // GPS Toggle Section
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 25),
                           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
@@ -102,7 +96,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              // Custom-styled switch
                               GestureDetector(
                                 onTap: () {
                                   setState(() {
@@ -136,10 +129,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ],
                           ),
                         ),
-
                         const SizedBox(height: 25),
-
-                        // Grid Section
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 25),
@@ -148,18 +138,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               crossAxisSpacing: 15,
                               mainAxisSpacing: 15,
                               children: [
-                                _buildFeatureCard("Route\nManagement", () {
-                                  // TODO: Navigate to Route Management
-                                }),
-                                _buildFeatureCard("Shift\nTracker", () {
-                                  // TODO: Navigate to Shift Tracker
-                                }),
-                                _buildFeatureCard("Bus\nCapacity", () {
-                                  // TODO: Navigate to Bus Capacity
-                                }),
-                                _buildFeatureCard("Report\nIssue", () {
-                                  // TODO: Navigate to Report Issue
-                                }),
+                                _buildFeatureCard("Route\nManagement", () {}),
+                                _buildFeatureCard("Shift\nTracker", () {}),
+                                _buildFeatureCard("Bus\nCapacity", () {}),
+                                _buildFeatureCard("Report\nIssue", () {}),
                               ],
                             ),
                           ),
@@ -173,35 +155,83 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              offset: Offset(0, -5),
+              blurRadius: 6,
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(4, (index) {
+            IconData icon;
+            switch (index) {
+              case 0:
+                icon = Icons.home;
+                break;
+              case 1:
+                icon = Icons.location_on_outlined;
+                break;
+              case 2:
+                icon = Icons.notifications_none;
+                break;
+              case 3:
+                icon = Icons.grid_view;
+                break;
+              default:
+                icon = Icons.help_outline;
+            }
 
-      // Bottom Navigation Bar
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFFBD2D01),
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        currentIndex: 0,
-        onTap: (index) {
-          // TODO: Implement page switching
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: "",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.location_on_outlined),
-            label: "",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_none),
-            label: "",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.grid_view),
-            label: "",
-          ),
-        ],
+            final isSelected = index == currentIndex;
+            return GestureDetector(
+              onTap: () {
+                setState(() => currentIndex = index);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: isSelected
+                      ? const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomLeft,
+                          stops: [0.0, 0.1, 0.5, 0.9, 1.0],
+                          colors: [
+                            Color(0xFFBD2D01),
+                            Color(0xFFCF4602),
+                            Color(0xFFF67F00),
+                            Color(0xFFCF4602),
+                            Color(0xFFBD2D01),
+                          ],
+                        )
+                      : null,
+                  color: isSelected ? null : Colors.white,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 4,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  icon,
+                  color: isSelected ? Colors.white : const Color(0xFFCF4602),
+                ),
+              ),
+            );
+          }),
+        ),
       ),
     );
   }
