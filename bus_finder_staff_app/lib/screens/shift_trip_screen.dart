@@ -158,7 +158,7 @@ class _ShiftTripScreenState extends State<ShiftTripScreen> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), // ← Updated bottom padding
               child: Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFFF67F00), width: 1),
+                  border: Border.all(color: const Color(0xFFF67F00), width: 2),
                   borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(6),
                     bottomRight: Radius.circular(6),
