@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'shift_trip_screen.dart'; // You'll create this next
 
 class ShiftTrackerScreen extends StatelessWidget {
   const ShiftTrackerScreen({super.key});
@@ -12,6 +13,7 @@ class ShiftTrackerScreen extends StatelessWidget {
       'departure': '6.10 a.m',
       'arrival': '8.40 a.m',
     },
+    // Add more if needed
   ];
 
   @override
@@ -20,6 +22,7 @@ class ShiftTrackerScreen extends StatelessWidget {
       backgroundColor: const Color(0xFFF5F5F5),
       body: Column(
         children: [
+          // Header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 22),
             width: double.infinity,
@@ -45,6 +48,7 @@ class ShiftTrackerScreen extends StatelessWidget {
 
           const SizedBox(height: 10),
 
+          // Shift list
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -91,7 +95,12 @@ class ShiftTrackerScreen extends StatelessWidget {
                       IconButton(
                         icon: const Icon(Icons.arrow_forward_ios, size: 20),
                         onPressed: () {
-                          // TODO: Navigate to detailed trip screen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ShiftTripScreen(),
+                            ),
+                          );
                         },
                       ),
                     ],
@@ -103,6 +112,7 @@ class ShiftTrackerScreen extends StatelessWidget {
         ],
       ),
 
+      // Bottom Nav Bar
       bottomNavigationBar: _buildBottomNavBar(context),
     );
   }
