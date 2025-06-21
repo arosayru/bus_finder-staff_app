@@ -84,7 +84,8 @@ class _ShiftTripScreenState extends State<ShiftTripScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(routeNo, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text(routeNo,
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
                         _detail("Route Name:", routeName),
                         _detail("Distance:", distance),
                         _detail("Departure Time:", departure),
@@ -135,46 +136,59 @@ class _ShiftTripScreenState extends State<ShiftTripScreen> {
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF67F00),
-                borderRadius: const BorderRadius.only(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF67F00),
+                borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(6),
                   topRight: Radius.circular(6),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(2, 4),
-                  )
-                ],
               ),
               child: const Text(
                 "Activities",
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
             ),
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ListView.builder(
-                itemCount: activities.length,
-                itemBuilder: (context, index) {
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    margin: const EdgeInsets.only(bottom: 10),
-                    color: const Color(0xFFFFF1E6),
-                    child: Text(activities[index]),
-                  );
-                },
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), // ← Updated bottom padding
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: const Color(0xFFF67F00), width: 1),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(6),
+                    bottomRight: Radius.circular(6),
+                  ),
+                ),
+                child: ListView.separated(
+                  padding: EdgeInsets.zero,
+                  itemCount: activities.length,
+                  separatorBuilder: (_, __) => Container(
+                    height: 1,
+                    color: const Color(0xFFF5B27E),
+                  ),
+                  itemBuilder: (context, index) {
+                    return Container(
+                      padding: const EdgeInsets.all(10),
+                      width: double.infinity,
+                      color: const Color(0xFFFFF1E6),
+                      child: Text(
+                        activities[index],
+                        style: const TextStyle(height: 1.5),
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNavBar(context),
+      //bottomNavigationBar: _buildBottomNavBar(context),
     );
   }
 
@@ -193,7 +207,8 @@ class _ShiftTripScreenState extends State<ShiftTripScreen> {
     );
   }
 
-  Widget _buildStyledButton(String text, Color color, VoidCallback onPressed, {bool isWide = false}) {
+  Widget _buildStyledButton(String text, Color color, VoidCallback onPressed,
+      {bool isWide = false}) {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
@@ -229,6 +244,7 @@ class _ShiftTripScreenState extends State<ShiftTripScreen> {
     );
   }
 
+  /*
   Widget _buildBottomNavBar(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
@@ -288,4 +304,5 @@ class _ShiftTripScreenState extends State<ShiftTripScreen> {
       ),
     );
   }
+  */
 }
