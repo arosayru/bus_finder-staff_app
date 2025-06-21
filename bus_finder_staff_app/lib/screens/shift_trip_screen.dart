@@ -19,8 +19,10 @@ class _ShiftTripScreenState extends State<ShiftTripScreen> {
 
   void _addActivity(String label) {
     final now = DateTime.now();
-    final time = "${now.hour % 12 == 0 ? 12 : now.hour % 12}.${now.minute.toString().padLeft(2, '0')}${now.hour >= 12 ? 'p.m' : 'a.m'}";
-    final date = "${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}";
+    final time =
+        "${now.hour % 12 == 0 ? 12 : now.hour % 12}.${now.minute.toString().padLeft(2, '0')}${now.hour >= 12 ? 'p.m' : 'a.m'}";
+    final date =
+        "${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}";
 
     setState(() {
       activities.insert(
@@ -36,7 +38,6 @@ class _ShiftTripScreenState extends State<ShiftTripScreen> {
       backgroundColor: const Color(0xFFF5F5F5),
       body: Column(
         children: [
-          // Header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 22),
             width: double.infinity,
@@ -59,10 +60,7 @@ class _ShiftTripScreenState extends State<ShiftTripScreen> {
               ],
             ),
           ),
-
           const SizedBox(height: 10),
-
-          // Route Info
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
@@ -98,48 +96,47 @@ class _ShiftTripScreenState extends State<ShiftTripScreen> {
               ),
             ),
           ),
-
           const SizedBox(height: 20),
-
-          // Action Buttons
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildTripButton("Start Trip", Colors.green, () => _addActivity("Starts Trip")),
-                _buildTripButton("End Trip", Colors.red.shade700, () => _addActivity("Ends Trip")),
+                Expanded(
+                  child: _buildStyledButton(
+                    "Start Trip",
+                    const Color(0xFF23C51E),
+                    () => _addActivity("Starts Trip"),
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: _buildStyledButton(
+                    "End Trip",
+                    const Color(0xFFC51E1E),
+                    () => _addActivity("Ends Trip"),
+                  ),
+                ),
               ],
             ),
           ),
-
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ElevatedButton(
-              onPressed: () => _addActivity("Interval"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0055E0),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-              ),
-              child: const Text(
-                "Interval",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
+            child: _buildStyledButton(
+              "Interval",
+              const Color(0xFF1263CE),
+              () => _addActivity("Interval"),
+              isWide: true,
             ),
           ),
-
           const SizedBox(height: 20),
-
-          // Activity List
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFFF7F0A),
+                color: const Color(0xFFF67F00),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(6),
                   topRight: Radius.circular(6),
@@ -158,8 +155,6 @@ class _ShiftTripScreenState extends State<ShiftTripScreen> {
               ),
             ),
           ),
-
-          // Activity Items
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -179,8 +174,6 @@ class _ShiftTripScreenState extends State<ShiftTripScreen> {
           ),
         ],
       ),
-
-      // Bottom nav bar (unselected style)
       bottomNavigationBar: _buildBottomNavBar(context),
     );
   }
@@ -200,15 +193,39 @@ class _ShiftTripScreenState extends State<ShiftTripScreen> {
     );
   }
 
-  Widget _buildTripButton(String text, Color color, VoidCallback onPressed) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+  Widget _buildStyledButton(String text, Color color, VoidCallback onPressed, {bool isWide = false}) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: isWide ? double.infinity : null,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              color.withOpacity(0.9),
+              color,
+              color.withOpacity(0.9),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: const [
+            BoxShadow(color: Colors.black45, blurRadius: 6, offset: Offset(2, 4)),
+            BoxShadow(color: Colors.white60, blurRadius: 3, offset: Offset(-2, -2)),
+          ],
+        ),
+        child: Center(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+        ),
       ),
-      child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
     );
   }
 
@@ -257,10 +274,10 @@ class _ShiftTripScreenState extends State<ShiftTripScreen> {
             },
             child: Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white,
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 4)),
                 ],
               ),
