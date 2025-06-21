@@ -236,6 +236,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // Main dashboard cards
   Widget _buildFeatureCard(String label, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,

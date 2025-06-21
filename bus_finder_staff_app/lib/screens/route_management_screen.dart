@@ -8,7 +8,6 @@ class RouteManagementScreen extends StatefulWidget {
 }
 
 class _RouteManagementScreenState extends State<RouteManagementScreen> {
-  // Dummy route data
   final List<Map<String, dynamic>> routes = List.generate(4, (index) {
     return {
       'number': 'No. 05',
@@ -31,13 +30,12 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
     };
   });
 
-  // Maintain expansion state for each item
   List<bool> expanded = [];
 
   @override
   void initState() {
     super.initState();
-    expanded = List.filled(routes.length, false); // initially all collapsed
+    expanded = List.filled(routes.length, false);
   }
 
   @override
@@ -46,7 +44,6 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
       backgroundColor: const Color(0xFFF5F5F5),
       body: Column(
         children: [
-          // Top Bar
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 22),
@@ -74,7 +71,6 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
 
           const SizedBox(height: 10),
 
-          // Routes List
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -100,7 +96,6 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header row
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -112,12 +107,8 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  route['number'],
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                Text(route['number'],
+                                    style: const TextStyle(fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 4),
                                 _buildDetailLine('Route Name:', route['routeName']),
                                 _buildDetailLine('Departure Time:', route['departureTime']),
@@ -139,45 +130,31 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
                           ),
                         ],
                       ),
-
-                      // Expanded Stop List
                       if (isOpen) ...[
                         const SizedBox(height: 10),
                         const Text(
                           "Route:",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         const SizedBox(height: 6),
                         Column(
                           children: List.generate(route['stops'].length, (i) {
                             final isFirst = i == 0;
                             final isLast = i == route['stops'].length - 1;
-
                             return Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Column(
                                   children: [
                                     if (!isFirst)
-                                      Container(
-                                        height: 8,
-                                        width: 2,
-                                        color: Colors.grey,
-                                      ),
+                                      Container(height: 8, width: 2, color: Colors.grey),
                                     Icon(
                                       isLast ? Icons.location_on : Icons.radio_button_checked,
                                       color: isLast ? Colors.red : Colors.orange,
                                       size: 18,
                                     ),
                                     if (!isLast)
-                                      Container(
-                                        height: 20,
-                                        width: 2,
-                                        color: Colors.grey,
-                                      ),
+                                      Container(height: 20, width: 2, color: Colors.grey),
                                   ],
                                 ),
                                 const SizedBox(width: 10),
@@ -200,6 +177,78 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
             ),
           ),
         ],
+      ),
+
+      // Bottom Navigation Bar (no active selection)
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              offset: Offset(0, -5),
+              blurRadius: 6,
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(4, (index) {
+            IconData icon;
+            switch (index) {
+              case 0:
+                icon = Icons.home;
+                break;
+              case 1:
+                icon = Icons.location_on_outlined;
+                break;
+              case 2:
+                icon = Icons.notifications_none;
+                break;
+              case 3:
+                icon = Icons.grid_view;
+                break;
+              default:
+                icon = Icons.help_outline;
+            }
+
+            return GestureDetector(
+              onTap: () {
+                if (index == 0) {
+                  // Navigate to Dashboard
+                  Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
+                } else {
+                  // Placeholder for other sections
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("This section will be implemented soon."),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 4,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  icon,
+                  color: const Color(0xFFCF4602),
+                ),
+              ),
+            );
+          }),
+        ),
       ),
     );
   }
