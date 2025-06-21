@@ -45,10 +45,23 @@ class BusCapacityScreen extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF23C51E),
-                  borderRadius: BorderRadius.circular(10),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF23C51E), Color(0xFF1DA817)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: const [
-                    BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(2, 4)),
+                    BoxShadow(
+                      color: Colors.black45,
+                      blurRadius: 6,
+                      offset: Offset(3, 4),
+                    ),
+                    BoxShadow(
+                      color: Colors.white24,
+                      blurRadius: 4,
+                      offset: Offset(-2, -2),
+                    ),
                   ],
                 ),
                 child: const Center(
@@ -77,10 +90,23 @@ class BusCapacityScreen extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFC51E1E),
-                  borderRadius: BorderRadius.circular(10),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFC51E1E), Color(0xFFAA1515)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: const [
-                    BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(2, 4)),
+                    BoxShadow(
+                      color: Colors.black45,
+                      blurRadius: 6,
+                      offset: Offset(3, 4),
+                    ),
+                    BoxShadow(
+                      color: Colors.white24,
+                      blurRadius: 4,
+                      offset: Offset(-2, -2),
+                    ),
                   ],
                 ),
                 child: const Center(
