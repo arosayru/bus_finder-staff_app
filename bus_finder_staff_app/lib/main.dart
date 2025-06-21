@@ -4,6 +4,7 @@ import 'screens/login_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/email_verification_screen.dart';
 import 'screens/reset_password_screen.dart';
+import 'screens/dashboard_screen.dart';
 
 void main() {
   runApp(const BusFinderApp());
@@ -26,6 +27,7 @@ class BusFinderApp extends StatelessWidget {
         '/forgot': (context) => const ForgotPasswordScreen(),
         '/verify': (context) => const EmailVerificationScreen(),
         '/reset': (context) => const ResetPasswordScreen(),
+        '/dashboard': (context) => const DashboardScreen(),
       },
     );
   }

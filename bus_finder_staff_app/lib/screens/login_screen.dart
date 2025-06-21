@@ -164,12 +164,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             child: Container(
                               alignment: Alignment.center,
-                              child: const Text(
-                                'Log In',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.pushReplacementNamed(context, '/dashboard');
+                                },
+                                child: const Text(
+                                  'Log In',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
