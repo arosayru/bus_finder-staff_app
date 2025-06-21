@@ -21,7 +21,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFFFB9933),
       body: SafeArea(
         child: Stack(
           children: [
@@ -138,7 +138,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               crossAxisSpacing: 15,
                               mainAxisSpacing: 15,
                               children: [
-                                _buildFeatureCard("Route\nManagement", () {}),
+                                _buildFeatureCard("Route\nManagement", () {
+                                  Navigator.pushNamed(context, 'route-management');
+                                }),
                                 _buildFeatureCard("Shift\nTracker", () {}),
                                 _buildFeatureCard("Bus\nCapacity", () {}),
                                 _buildFeatureCard("Report\nIssue", () {}),
@@ -155,13 +157,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
+
+      // Bottom nav bar
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black26,
