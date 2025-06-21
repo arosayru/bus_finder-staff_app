@@ -28,7 +28,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Container(
               height: 160,
               decoration: const BoxDecoration(
-                color: Color(0xFFFFA74F),
+                color: Color(0xFFFB9933),
               ),
             ),
 
@@ -89,7 +89,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           margin: const EdgeInsets.symmetric(horizontal: 25),
                           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFF8B2D),
+                            color: const Color(0xFFF67F00),
                             borderRadius: BorderRadius.circular(15),
                           ),
                           child: Row(
@@ -104,8 +104,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                               Switch(
                                 value: isGpsEnabled,
-                                activeColor: Colors.green,
-                                inactiveThumbColor: Colors.red,
+                                activeColor: Color(0xFF23C51E),
+                                inactiveThumbColor: Color(0xFFC51E1E),
                                 onChanged: (value) {
                                   setState(() {
                                     isGpsEnabled = value;
@@ -192,12 +192,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
+             begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            stops: [0.0, 0.1, 0.5, 0.9, 1.0],
             colors: [
-              Color(0xFFFF8B2D),
+              Color(0xFFBD2D01),
+              Color(0xFFCF4602),
+              Color(0xFFF67F00),
+              Color(0xFFCF4602),
               Color(0xFFBD2D01),
             ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(12),
           boxShadow: const [
