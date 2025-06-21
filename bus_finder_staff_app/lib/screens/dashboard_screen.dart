@@ -102,15 +102,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              Switch(
-                                value: isGpsEnabled,
-                                activeColor: Color(0xFF23C51E),
-                                inactiveThumbColor: Color(0xFFC51E1E),
-                                onChanged: (value) {
+                              // Custom-styled switch
+                              GestureDetector(
+                                onTap: () {
                                   setState(() {
-                                    isGpsEnabled = value;
+                                    isGpsEnabled = !isGpsEnabled;
                                   });
                                 },
+                                child: Container(
+                                  width: 52,
+                                  height: 30,
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: AnimatedAlign(
+                                    alignment: isGpsEnabled ? Alignment.centerRight : Alignment.centerLeft,
+                                    duration: const Duration(milliseconds: 200),
+                                    child: Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: isGpsEnabled
+                                            ? const Color(0xFF23C51E)
+                                            : const Color(0xFFC51E1E),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -192,7 +213,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-             begin: Alignment.topLeft,
+            begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             stops: [0.0, 0.1, 0.5, 0.9, 1.0],
             colors: [
