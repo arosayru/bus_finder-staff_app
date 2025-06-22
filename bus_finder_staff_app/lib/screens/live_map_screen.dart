@@ -24,7 +24,10 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
             child: Row(
               children: [
                 GestureDetector(
-                  onTap: () => Navigator.pop(context),
+                  onTap: () {
+                    // 🔁 Force dashboard reload and reset nav state
+                    Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
+                  },
                   child: const Icon(Icons.arrow_back, color: Colors.white),
                 ),
                 const SizedBox(width: 12),
@@ -141,8 +144,15 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
                 // Already on Live Map
               } else if (index == 0) {
                 Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
-              } else if (index == 2){
+              } else if (index == 2) {
                 Navigator.pushNamedAndRemoveUntil(context, 'notification', (route) => false);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("This section will be implemented soon."),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
               }
             },
             child: Container(

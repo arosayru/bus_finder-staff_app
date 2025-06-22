@@ -41,7 +41,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             child: Row(
               children: [
                 GestureDetector(
-                  onTap: () => Navigator.pop(context),
+                  onTap: () {
+                    // 🔁 Force dashboard reload and reset nav state
+                    Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
+                  },
                   child: const Icon(Icons.arrow_back, color: Colors.white),
                 ),
                 const SizedBox(width: 12),
