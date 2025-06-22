@@ -116,13 +116,12 @@ class ReportIssueScreen extends StatelessWidget {
             onTap: () {
               if (index == 0) {
                 Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("This section will be implemented soon."),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+              } else if (index == 1) {
+                Navigator.pushNamedAndRemoveUntil(context, 'live-map', (route) => false);
+              } else if (index == 2) {
+                Navigator.pushNamedAndRemoveUntil(context, 'notification', (route) => false);
+              } else if (index == 3) {
+                Navigator.pushNamedAndRemoveUntil(context, 'more', (route) => false);
               }
             },
             child: Container(

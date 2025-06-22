@@ -218,14 +218,12 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
                 if (index == 0) {
                   // Navigate to Dashboard
                   Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
-                } else {
-                  // Placeholder for other sections
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("This section will be implemented soon."),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                } else if (index == 1) {
+                  Navigator.pushNamedAndRemoveUntil(context, 'live-map', (route) => false);
+                } else if (index == 2) {
+                  Navigator.pushNamedAndRemoveUntil(context, 'notification', (route) => false);
+                } else if (index == 3) {
+                  Navigator.pushNamedAndRemoveUntil(context, 'more', (route) => false);
                 }
               },
               child: Container(
