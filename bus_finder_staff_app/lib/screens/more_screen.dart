@@ -76,7 +76,12 @@ class _MoreScreenState extends State<MoreScreen> {
                             onTap: () {
                               Navigator.pushNamed(context, 'review-feedback');
                             }),
-                          _buildMenuItem(icon: Icons.help_outline, label: "Help & Support", onTap: () {}),
+                          _buildMenuItem(
+                            icon: Icons.help_outline, 
+                            label: "Help & Support", 
+                            onTap: () {
+                              Navigator.pushNamed(context, 'help-and-support');
+                            }),
                           _buildMenuItem(icon: Icons.info_outline, label: "About Us", onTap: () {}),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
