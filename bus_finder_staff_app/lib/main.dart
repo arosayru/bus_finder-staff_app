@@ -13,7 +13,6 @@ import 'screens/live_map_screen.dart';
 import 'screens/notification_screen.dart';
 import 'screens/more_screen.dart';
 import 'screens/profile_screen.dart';
-import 'screens/language_screen.dart';
 import 'screens/review_feedback_screen.dart';
 import 'screens/help_and_support_screen.dart';
 import 'screens/about_us_screen.dart';
@@ -48,7 +47,6 @@ class BusFinderApp extends StatelessWidget {
         'notification': (context) => const NotificationsScreen(),
         'more': (context) => const MoreScreen(),
         'profile': (context) => const ProfileScreen(),
-        'language': (context) => const LanguageScreen(),
         'review-feedback': (context) => ReviewFeedbackScreen(),
         'help-and-support': (context) => const HelpSupportScreen(),
         'about-us': (context) => const AboutUsScreen()
