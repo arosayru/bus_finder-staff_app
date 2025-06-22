@@ -13,82 +13,105 @@ class _MoreScreenState extends State<MoreScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      body: SingleChildScrollView(
-        child: Column(
+      backgroundColor: const Color(0xFFFB9933),
+      body: SafeArea(
+        child: Stack(
           children: [
-            // Header with avatar and name
-            Container(
-              width: double.infinity,
-              color: const Color(0xFFFB9933),
-              padding: const EdgeInsets.symmetric(vertical: 40),
-              child: Column(
-                children: const [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: Colors.black,
-                    child: Icon(Icons.person, size: 48, color: Colors.white),
+            Container(height: 160, color: const Color(0xFFFB9933)),
+            Column(
+              children: [
+                // 🔸 Centered Profile Section
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Column(
+                    children: const [
+                      CircleAvatar(
+                        radius: 36,
+                        backgroundColor: Colors.black,
+                        child: Icon(Icons.person, size: 44, color: Colors.white),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        "Peter Parker",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    "Peter Parker",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                ),
+
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.only(top: 20),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(25),
+                        topRight: Radius.circular(25),
+                      ),
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 20),
+                          _buildMenuItem(icon: Icons.person, label: "Profile", onTap: () {}),
+                          _buildMenuItem(icon: Icons.language, label: "Language", onTap: () {}),
+                          _buildMenuItem(icon: Icons.feedback_outlined, label: "Review Feedback", onTap: () {}),
+                          _buildMenuItem(icon: Icons.help_outline, label: "Help & Support", onTap: () {}),
+                          _buildMenuItem(icon: Icons.info_outline, label: "About Us", onTap: () {}),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    stops: [0.0, 0.1, 0.5, 0.9, 1.0],
+                                    colors: [
+                                      Color(0xFFBD2D01),
+                                      Color(0xFFCF4602),
+                                      Color(0xFFF67F00),
+                                      Color(0xFFCF4602),
+                                      Color(0xFFBD2D01),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: const [
+                                    BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(2, 4)),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.logout, color: Colors.white),
+                                    SizedBox(width: 14),
+                                    Expanded(
+                                      child: Text(
+                                        "Log Out",
+                                        style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                      ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-
-            const SizedBox(height: 20),
-
-            // Menu Items
-            _buildMenuItem(
-              icon: Icons.person,
-              label: "Profile",
-              onTap: () {
-                // TODO: Navigate to Profile
-              },
-            ),
-            _buildMenuItem(
-              icon: Icons.language,
-              label: "Language",
-              onTap: () {
-                // TODO: Navigate to Language
-              },
-            ),
-            _buildMenuItem(
-              icon: Icons.feedback_outlined,
-              label: "Review Feedback",
-              onTap: () {
-                // TODO: Navigate to Review Feedback
-              },
-            ),
-            _buildMenuItem(
-              icon: Icons.help_outline,
-              label: "Help & Support",
-              onTap: () {
-                // TODO: Navigate to Help & Support
-              },
-            ),
-            _buildMenuItem(
-              icon: Icons.info_outline,
-              label: "About Us",
-              onTap: () {
-                // TODO: Navigate to About Us
-              },
-            ),
-            _buildMenuItem(
-              icon: Icons.logout,
-              label: "Log Out",
-              onTap: () {
-                // TODO: Log out logic
-              },
-            ),
-
-            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -108,18 +131,18 @@ class _MoreScreenState extends State<MoreScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            stops: [0.0, 0.1, 0.5, 0.9, 1.0],
-            colors: [
-              Color(0xFFBD2D01),
-              Color(0xFFCF4602),
-              Color(0xFFF67F00),
-              Color(0xFFCF4602),
-              Color(0xFFBD2D01),
-            ],
-          ),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              stops: [0.0, 0.1, 0.5, 0.9, 1.0],
+              colors: [
+                Color(0xFFBD2D01),
+                Color(0xFFCF4602),
+                Color(0xFFF67F00),
+                Color(0xFFCF4602),
+                Color(0xFFBD2D01),
+              ],
+            ),
             borderRadius: BorderRadius.circular(10),
             boxShadow: const [
               BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(2, 4)),
@@ -132,11 +155,7 @@ class _MoreScreenState extends State<MoreScreen> {
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
               const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.white),
@@ -212,10 +231,7 @@ class _MoreScreenState extends State<MoreScreen> {
                   BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 4)),
                 ],
               ),
-              child: Icon(
-                icon,
-                color: isSelected ? Colors.white : const Color(0xFFCF4602),
-              ),
+              child: Icon(icon, color: isSelected ? Colors.white : const Color(0xFFCF4602)),
             ),
           );
         }),
