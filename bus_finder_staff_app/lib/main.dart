@@ -14,6 +14,7 @@ import 'screens/notification_screen.dart';
 import 'screens/more_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/language_screen.dart';
+import 'screens/review_feedback_screen.dart';
 
 void main() {
   runApp(const BusFinderApp());
@@ -46,6 +47,7 @@ class BusFinderApp extends StatelessWidget {
         'more': (context) => const MoreScreen(),
         'profile': (context) => const ProfileScreen(),
         'language': (context) => const LanguageScreen(),
+        'review-feedback': (context) => ReviewFeedbackScreen(),
       },
     );
   }
