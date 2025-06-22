@@ -163,8 +163,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
-
-      // Bottom nav bar
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -202,6 +200,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             return GestureDetector(
               onTap: () {
                 setState(() => currentIndex = index);
+
+                if (index == 0) {
+                  // Already on dashboard, do nothing
+                } else if (index == 1) {
+                  Navigator.pushNamed(context, 'live-map'); // Replace with your route name
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("This section will be implemented soon."),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
               },
               child: Container(
                 padding: const EdgeInsets.all(10),
@@ -242,7 +253,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Main dashboard cards
   Widget _buildFeatureCard(String label, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
