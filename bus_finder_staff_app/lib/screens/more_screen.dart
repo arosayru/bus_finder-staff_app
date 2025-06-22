@@ -64,7 +64,12 @@ class _MoreScreenState extends State<MoreScreen> {
                             onTap: () {
                               Navigator.pushNamed(context, 'profile');
                             }),
-                          _buildMenuItem(icon: Icons.language, label: "Language", onTap: () {}),
+                          _buildMenuItem(
+                            icon: Icons.language, 
+                            label: "Language", 
+                            onTap: () {
+                              Navigator.pushNamed(context, 'language');
+                            }),
                           _buildMenuItem(icon: Icons.feedback_outlined, label: "Review Feedback", onTap: () {}),
                           _buildMenuItem(icon: Icons.help_outline, label: "Help & Support", onTap: () {}),
                           _buildMenuItem(icon: Icons.info_outline, label: "About Us", onTap: () {}),
