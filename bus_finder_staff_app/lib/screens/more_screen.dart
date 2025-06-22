@@ -58,7 +58,12 @@ class _MoreScreenState extends State<MoreScreen> {
                       child: Column(
                         children: [
                           const SizedBox(height: 20),
-                          _buildMenuItem(icon: Icons.person, label: "Profile", onTap: () {}),
+                          _buildMenuItem(
+                            icon: Icons.person, 
+                            label: "Profile", 
+                            onTap: () {
+                              Navigator.pushNamed(context, 'profile');
+                            }),
                           _buildMenuItem(icon: Icons.language, label: "Language", onTap: () {}),
                           _buildMenuItem(icon: Icons.feedback_outlined, label: "Review Feedback", onTap: () {}),
                           _buildMenuItem(icon: Icons.help_outline, label: "Help & Support", onTap: () {}),

@@ -12,6 +12,7 @@ import 'screens/report_issue_screen.dart';
 import 'screens/live_map_screen.dart';
 import 'screens/notification_screen.dart';
 import 'screens/more_screen.dart';
+import 'screens/profile_screen.dart';
 
 void main() {
   runApp(const BusFinderApp());
@@ -42,6 +43,7 @@ class BusFinderApp extends StatelessWidget {
         'live-map': (context) => const LiveMapScreen(),
         'notification': (context) => const NotificationsScreen(),
         'more': (context) => const MoreScreen(),
+        'profile': (context) => const ProfileScreen(),
       },
     );
   }
