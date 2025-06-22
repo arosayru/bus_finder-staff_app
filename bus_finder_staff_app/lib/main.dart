@@ -10,6 +10,7 @@ import 'screens/shift_tracker_screen.dart';
 import 'screens/bus_capacity_screen.dart';
 import 'screens/report_issue_screen.dart';
 import 'screens/live_map_screen.dart';
+import 'screens/notification_screen.dart';
 
 void main() {
   runApp(const BusFinderApp());
@@ -38,6 +39,7 @@ class BusFinderApp extends StatelessWidget {
         'bus-capacity': (context) => const BusCapacityScreen(),
         'report-issue': (context) => const ReportIssueScreen(),
         'live-map': (context) => const LiveMapScreen(),
+        'notification': (context) => const NotificationsScreen(),
       },
     );
   }

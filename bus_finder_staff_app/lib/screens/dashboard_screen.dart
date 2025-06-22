@@ -205,13 +205,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   // Already on dashboard, do nothing
                 } else if (index == 1) {
                   Navigator.pushNamed(context, 'live-map'); // Replace with your route name
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("This section will be implemented soon."),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                } else if (index == 2) {
+                  Navigator.pushNamed(context, 'notification');
                 }
               },
               child: Container(
