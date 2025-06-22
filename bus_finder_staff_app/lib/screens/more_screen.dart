@@ -82,7 +82,12 @@ class _MoreScreenState extends State<MoreScreen> {
                             onTap: () {
                               Navigator.pushNamed(context, 'help-and-support');
                             }),
-                          _buildMenuItem(icon: Icons.info_outline, label: "About Us", onTap: () {}),
+                          _buildMenuItem(
+                            icon: Icons.info_outline, 
+                            label: "About Us", 
+                            onTap: () {
+                              Navigator.pushNamed(context, 'about-us');
+                            }),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                             child: GestureDetector(

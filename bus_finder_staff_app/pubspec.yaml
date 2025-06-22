@@ -30,6 +30,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/logo_staff.png
+    - assets/images/logo.png
     - assets/images/sample_map.jpeg
 
   fonts:
