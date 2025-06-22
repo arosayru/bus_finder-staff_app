@@ -192,8 +192,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 // Already on Notifications screen
               } else if (index == 0) {
                 Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
-              } else if (index == 1){
+              } else if (index == 1) {
                 Navigator.pushNamedAndRemoveUntil(context, 'live-map', (route) => false);
+              } else if (index == 3) {
+                Navigator.pushNamedAndRemoveUntil(context, 'more', (route) => false);
               }
             },
             child: Container(

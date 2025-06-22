@@ -147,12 +147,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
               } else if (index == 2) {
                 Navigator.pushNamedAndRemoveUntil(context, 'notification', (route) => false);
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("This section will be implemented soon."),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+                Navigator.pushNamedAndRemoveUntil(context, 'more', (route) => false);
               }
             },
             child: Container(

@@ -207,6 +207,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Navigator.pushNamed(context, 'live-map'); // Replace with your route name
                 } else if (index == 2) {
                   Navigator.pushNamed(context, 'notification');
+                } else if (index == 3) {
+                  Navigator.pushNamed(context, 'more');
                 }
               },
               child: Container(
