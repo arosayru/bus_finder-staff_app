@@ -8,7 +8,11 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
   bool _obscureText = true;
+
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -51,123 +55,118 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Login',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700, // slightly bolder
-                          color: Color(0xFFBD2D01),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Email Field
-                      TextField(
-                        style: const TextStyle(
-                          color: Color(0xFFBD2D01), // input text color
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Email or username',
-                          hintStyle: const TextStyle(color: Color(0xFFF67F00)),
-                          filled: true,
-                          fillColor: const Color(0xFFFFE5CC),
-                          suffixIcon: const Icon(
-                            Icons.person,
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Login',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
                             color: Color(0xFFBD2D01),
                           ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
                         ),
-                      ),
-                      const SizedBox(height: 15),
+                        const SizedBox(height: 20),
 
-                      // Password Field
-                      TextField(
-                        obscureText: _obscureText,
-                        style: const TextStyle(
-                          color: Color(0xFFBD2D01), // input text color
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Password',
-                          hintStyle: const TextStyle(color: Color(0xFFF67F00)),
-                          filled: true,
-                          fillColor: const Color(0xFFFFE5CC),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureText
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                              color: const Color(0xFFBD2D01),
+                        // Email field with floating label
+                        TextFormField(
+                          controller: _emailController,
+                          style: const TextStyle(color: Color(0xFFBD2D01)),
+                          decoration: InputDecoration(
+                            labelText: 'Email',
+                            labelStyle: const TextStyle(
+                              color: Color(0xFFF67F00),
                             ),
-                            onPressed: () {
-                              setState(() {
-                                _obscureText = !_obscureText;
-                              });
-                            },
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/forgot');
-                          },
-                          child: const Text(
-                            'Forget Password?',
-                            style: TextStyle(
-                              color: Color(0xFFBD2D01),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Login Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 45,
-                        child: ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            elevation: 3,
-                            shape: RoundedRectangleBorder(
+                            filled: true,
+                            fillColor: const Color(0xFFFFE5CC),
+                            suffixIcon: const Icon(Icons.person, color: Color(0xFFBD2D01)),
+                            border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
                             ),
-                            padding: EdgeInsets.zero,
-                            backgroundColor: Colors.transparent,
                           ),
-                          child: Ink(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.bottomCenter,
-                                end: Alignment.topCenter,
-                                colors: [
-                                  Color(0xFFCF4602),
-                                  Color(0xFFF67F00),
-                                ],
+                        ),
+                        const SizedBox(height: 15),
+
+                        // Password field with floating label
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: _obscureText,
+                          style: const TextStyle(color: Color(0xFFBD2D01)),
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            labelStyle: const TextStyle(
+                              color: Color(0xFFF67F00),
+                            ),
+                            filled: true,
+                            fillColor: const Color(0xFFFFE5CC),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscureText ? Icons.visibility_off : Icons.visibility,
+                                color: const Color(0xFFBD2D01),
                               ),
-                              borderRadius: BorderRadius.circular(10),
+                              onPressed: () {
+                                setState(() => _obscureText = !_obscureText);
+                              },
                             ),
-                            child: Container(
-                              alignment: Alignment.center,
-                              child: GestureDetector(
-                                onTap: () {
-                                  Navigator.pushReplacementNamed(context, '/dashboard');
-                                },
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(context, '/forgot');
+                            },
+                            child: const Text(
+                              'Forget Password?',
+                              style: TextStyle(
+                                color: Color(0xFFBD2D01),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Login button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 45,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pushReplacementNamed(context, '/dashboard');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              elevation: 3,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: EdgeInsets.zero,
+                              backgroundColor: Colors.transparent,
+                            ),
+                            child: Ink(
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.bottomCenter,
+                                  end: Alignment.topCenter,
+                                  colors: [
+                                    Color(0xFFCF4602),
+                                    Color(0xFFF67F00),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Container(
+                                alignment: Alignment.center,
                                 child: const Text(
                                   'Log In',
                                   style: TextStyle(
@@ -180,8 +179,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
