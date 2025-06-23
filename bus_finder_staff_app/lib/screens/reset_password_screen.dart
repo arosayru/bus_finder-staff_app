@@ -12,6 +12,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
 
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -115,20 +118,19 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     ),
                     const SizedBox(height: 15),
 
-                    // New Password Field
-                    TextField(
+                    // ✅ Floating Label Password Field
+                    TextFormField(
+                      controller: _newPasswordController,
                       obscureText: _obscureNewPassword,
                       style: const TextStyle(color: Color(0xFFBD2D01)),
                       decoration: InputDecoration(
-                        hintText: 'Password',
-                        hintStyle: const TextStyle(color: Color(0xFFF67F00)),
+                        labelText: 'Password',
+                        labelStyle: const TextStyle(color: Color(0xFFF67F00)),
                         filled: true,
                         fillColor: const Color(0xFFFFE5CC),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscureNewPassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
+                            _obscureNewPassword ? Icons.visibility_off : Icons.visibility,
                             color: const Color(0xFFBD2D01),
                           ),
                           onPressed: () {
@@ -146,26 +148,24 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                     const SizedBox(height: 15),
 
-                    // Confirm Password Field
-                    TextField(
+                    // ✅ Floating Label Confirm Password Field
+                    TextFormField(
+                      controller: _confirmPasswordController,
                       obscureText: _obscureConfirmPassword,
                       style: const TextStyle(color: Color(0xFFBD2D01)),
                       decoration: InputDecoration(
-                        hintText: 'Confirm Password',
-                        hintStyle: const TextStyle(color: Color(0xFFF67F00)),
+                        labelText: 'Confirm Password',
+                        labelStyle: const TextStyle(color: Color(0xFFF67F00)),
                         filled: true,
                         fillColor: const Color(0xFFFFE5CC),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscureConfirmPassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
+                            _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
                             color: const Color(0xFFBD2D01),
                           ),
                           onPressed: () {
                             setState(() {
-                              _obscureConfirmPassword =
-                                  !_obscureConfirmPassword;
+                              _obscureConfirmPassword = !_obscureConfirmPassword;
                             });
                           },
                         ),
