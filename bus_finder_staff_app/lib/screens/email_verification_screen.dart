@@ -5,6 +5,8 @@ class EmailVerificationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final TextEditingController _codeController = TextEditingController();
+
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -68,6 +70,8 @@ class EmailVerificationScreen extends StatelessWidget {
               ),
 
               const Spacer(),
+
+              // Form Card
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 30),
                 padding: const EdgeInsets.all(20),
@@ -103,11 +107,14 @@ class EmailVerificationScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 15),
-                    TextField(
+
+                    // ✅ Floating Label Input for code
+                    TextFormField(
+                      controller: _codeController,
                       style: const TextStyle(color: Color(0xFFBD2D01)),
                       decoration: InputDecoration(
-                        hintText: 'Enter your code',
-                        hintStyle: const TextStyle(color: Color(0xFFF67F00)),
+                        labelText: 'Enter your code',
+                        labelStyle: const TextStyle(color: Color(0xFFF67F00)),
                         filled: true,
                         fillColor: const Color(0xFFFFE5CC),
                         border: OutlineInputBorder(
@@ -116,7 +123,9 @@ class EmailVerificationScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 10),
+
                     RichText(
                       text: TextSpan(
                         text: "If you don't received the code! ",
@@ -136,6 +145,8 @@ class EmailVerificationScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 20),
+
+                    // ✅ Verify Button
                     SizedBox(
                       width: double.infinity,
                       height: 45,
@@ -180,6 +191,7 @@ class EmailVerificationScreen extends StatelessWidget {
                   ],
                 ),
               ),
+
               const Spacer(flex: 2),
             ],
           ),
