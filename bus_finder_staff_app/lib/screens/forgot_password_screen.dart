@@ -5,6 +5,8 @@ class ForgotPasswordScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final TextEditingController _emailController = TextEditingController();
+
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -49,7 +51,6 @@ class ForgotPasswordScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // Line below the title
                   Container(
                     height: 1,
                     margin: const EdgeInsets.only(top: 2),
@@ -106,11 +107,14 @@ class ForgotPasswordScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 15),
-                    TextField(
+
+                    // ✅ Floating Label Input Field
+                    TextFormField(
+                      controller: _emailController,
                       style: const TextStyle(color: Color(0xFFBD2D01)),
                       decoration: InputDecoration(
-                        hintText: 'Enter the email address',
-                        hintStyle: const TextStyle(color: Color(0xFFF67F00)),
+                        labelText: 'Enter the email address',
+                        labelStyle: const TextStyle(color: Color(0xFFF67F00)),
                         filled: true,
                         fillColor: const Color(0xFFFFE5CC),
                         border: OutlineInputBorder(
@@ -119,6 +123,7 @@ class ForgotPasswordScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 20),
 
                     // Recover Password Button
