@@ -53,7 +53,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // 🔸 Header
               Padding(
                 padding: const EdgeInsets.only(left: 10.0, top: 10.0),
                 child: Row(
@@ -89,7 +88,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
 
-              // 🔸 Scrollable Form Content
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(vertical: 20),
@@ -144,18 +142,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        _buildTextField(controller: _firstNameController),
-                        _buildTextField(controller: _lastNameController),
-                        _buildTextField(controller: _usernameController),
-                        _buildTextField(controller: _emailController, enabled: false),
+                        _buildTextField(controller: _firstNameController, label: 'First Name'),
+                        _buildTextField(controller: _lastNameController, label: 'Last Name'),
+                        _buildTextField(controller: _usernameController, label: 'Username'),
+                        _buildTextField(controller: _emailController, label: 'Email', enabled: false),
 
-                        _buildPasswordField(_passwordController, "Password", _showPassword, () {
-                          setState(() => _showPassword = !_showPassword);
-                        }),
+                        _buildPasswordField(
+                          controller: _passwordController,
+                          label: 'Password',
+                          visible: _showPassword,
+                          toggle: () => setState(() => _showPassword = !_showPassword),
+                        ),
 
-                        _buildPasswordField(_confirmPasswordController, "Confirm Password", _showConfirmPassword, () {
-                          setState(() => _showConfirmPassword = !_showConfirmPassword);
-                        }),
+                        _buildPasswordField(
+                          controller: _confirmPasswordController,
+                          label: 'Confirm Password',
+                          visible: _showConfirmPassword,
+                          toggle: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
+                        ),
 
                         const SizedBox(height: 20),
                         SizedBox(
@@ -216,14 +220,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildTextField({required TextEditingController controller, bool enabled = true}) {
+  Widget _buildTextField({required TextEditingController controller, required String label, bool enabled = true}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: TextField(
+      child: TextFormField(
         controller: controller,
         enabled: enabled,
         style: const TextStyle(color: Color(0xFFBD2D01)),
         decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: Color(0xFFF67F00)),
           filled: true,
           fillColor: const Color(0xFFFFE5CC),
           border: OutlineInputBorder(
@@ -235,19 +241,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildPasswordField(
-    TextEditingController controller,
-    String hint,
-    bool visible,
-    VoidCallback toggle,
-  ) {
+  Widget _buildPasswordField({
+    required TextEditingController controller,
+    required String label,
+    required bool visible,
+    required VoidCallback toggle,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: TextField(
+      child: TextFormField(
         controller: controller,
         obscureText: !visible,
         style: const TextStyle(color: Color(0xFFBD2D01)),
         decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: Color(0xFFF67F00)),
           suffixIcon: IconButton(
             icon: Icon(
               visible ? Icons.visibility : Icons.visibility_off,
