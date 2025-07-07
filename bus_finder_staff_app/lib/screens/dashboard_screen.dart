@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../user_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -10,6 +13,46 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   bool isGpsEnabled = false;
   int currentIndex = 0;
+  String staffId = 'N/A';
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchStaffId();
+  }
+
+  Future<void> _fetchStaffId() async {
+    try {
+      final localStaffId = await UserService.getStaffId();
+      if (localStaffId != null && localStaffId != 'N/A') {
+        final url = Uri.parse('https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/api/staff/$localStaffId');
+        final response = await http.get(url);
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          setState(() {
+            staffId = data['staffId']?.toString() ?? data['StaffID']?.toString() ?? localStaffId;
+            isLoading = false;
+          });
+        } else {
+          setState(() {
+            staffId = localStaffId;
+            isLoading = false;
+          });
+        }
+      } else {
+        setState(() {
+          staffId = 'N/A';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        staffId = 'N/A';
+        isLoading = false;
+      });
+    }
+  }
 
   String getGreetingMessage() {
     final hour = DateTime.now().hour;
@@ -41,9 +84,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              "Hi Peter Parker,",
-                              style: TextStyle(
+                            isLoading
+                                ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                                : Text(
+                              'Hi $staffId,',
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -217,17 +266,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   shape: BoxShape.circle,
                   gradient: isSelected
                       ? const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomLeft,
-                          stops: [0.0, 0.1, 0.5, 0.9, 1.0],
-                          colors: [
-                            Color(0xFFBD2D01),
-                            Color(0xFFCF4602),
-                            Color(0xFFF67F00),
-                            Color(0xFFCF4602),
-                            Color(0xFFBD2D01),
-                          ],
-                        )
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomLeft,
+                    stops: [0.0, 0.1, 0.5, 0.9, 1.0],
+                    colors: [
+                      Color(0xFFBD2D01),
+                      Color(0xFFCF4602),
+                      Color(0xFFF67F00),
+                      Color(0xFFCF4602),
+                      Color(0xFFBD2D01),
+                    ],
+                  )
                       : null,
                   color: isSelected ? null : Colors.white,
                   boxShadow: const [

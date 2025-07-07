@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../user_service.dart';
 
 class MoreScreen extends StatefulWidget {
   const MoreScreen({super.key});
@@ -59,34 +60,37 @@ class _MoreScreenState extends State<MoreScreen> {
                         children: [
                           const SizedBox(height: 20),
                           _buildMenuItem(
-                            icon: Icons.person, 
-                            label: "Profile", 
-                            onTap: () {
-                              Navigator.pushNamed(context, 'profile');
-                            }),
+                              icon: Icons.person,
+                              label: "Profile",
+                              onTap: () {
+                                Navigator.pushNamed(context, 'profile');
+                              }),
                           _buildMenuItem(
-                            icon: Icons.feedback_outlined, 
-                            label: "Review Feedback", 
-                            onTap: () {
-                              Navigator.pushNamed(context, 'review-feedback');
-                            }),
+                              icon: Icons.feedback_outlined,
+                              label: "Review Feedback",
+                              onTap: () {
+                                Navigator.pushNamed(context, 'review-feedback');
+                              }),
                           _buildMenuItem(
-                            icon: Icons.help_outline, 
-                            label: "Help & Support", 
-                            onTap: () {
-                              Navigator.pushNamed(context, 'help-and-support');
-                            }),
+                              icon: Icons.help_outline,
+                              label: "Help & Support",
+                              onTap: () {
+                                Navigator.pushNamed(context, 'help-and-support');
+                              }),
                           _buildMenuItem(
-                            icon: Icons.info_outline, 
-                            label: "About Us", 
-                            onTap: () {
-                              Navigator.pushNamed(context, 'about-us');
-                            }),
+                              icon: Icons.info_outline,
+                              label: "About Us",
+                              onTap: () {
+                                Navigator.pushNamed(context, 'about-us');
+                              }),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                             child: GestureDetector(
-                              onTap: () {
-                                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                              onTap: () async {
+                                await UserService.clearStaffData();
+                                if (mounted) {
+                                  Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                                }
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
@@ -233,17 +237,17 @@ class _MoreScreenState extends State<MoreScreen> {
                 shape: BoxShape.circle,
                 gradient: isSelected
                     ? const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomLeft,
-                        stops: [0.0, 0.1, 0.5, 0.9, 1.0],
-                        colors: [
-                          Color(0xFFBD2D01),
-                          Color(0xFFCF4602),
-                          Color(0xFFF67F00),
-                          Color(0xFFCF4602),
-                          Color(0xFFBD2D01),
-                        ],
-                      )
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomLeft,
+                  stops: [0.0, 0.1, 0.5, 0.9, 1.0],
+                  colors: [
+                    Color(0xFFBD2D01),
+                    Color(0xFFCF4602),
+                    Color(0xFFF67F00),
+                    Color(0xFFCF4602),
+                    Color(0xFFBD2D01),
+                  ],
+                )
                     : null,
                 color: isSelected ? null : Colors.white,
                 boxShadow: const [

@@ -5,7 +5,7 @@ class EmailVerificationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TextEditingController _codeController = TextEditingController();
+    final TextEditingController codeController = TextEditingController();
 
     return Scaffold(
       body: Container(
@@ -110,7 +110,7 @@ class EmailVerificationScreen extends StatelessWidget {
 
                     // ✅ Floating Label Input for code
                     TextFormField(
-                      controller: _codeController,
+                      controller: codeController,
                       style: const TextStyle(color: Color(0xFFBD2D01)),
                       decoration: InputDecoration(
                         labelText: 'Enter your code',

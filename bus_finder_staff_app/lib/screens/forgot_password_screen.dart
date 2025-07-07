@@ -5,7 +5,7 @@ class ForgotPasswordScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TextEditingController _emailController = TextEditingController();
+    final TextEditingController emailController = TextEditingController();
 
     return Scaffold(
       body: Container(
@@ -110,7 +110,7 @@ class ForgotPasswordScreen extends StatelessWidget {
 
                     // ✅ Floating Label Input Field
                     TextFormField(
-                      controller: _emailController,
+                      controller: emailController,
                       style: const TextStyle(color: Color(0xFFBD2D01)),
                       decoration: InputDecoration(
                         labelText: 'Enter the email address',
