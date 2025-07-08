@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../user_service.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class MoreScreen extends StatefulWidget {
   const MoreScreen({super.key});
@@ -10,6 +12,45 @@ class MoreScreen extends StatefulWidget {
 
 class _MoreScreenState extends State<MoreScreen> {
   final int currentIndex = 3;
+
+  String staffFirstName = '';
+  String staffLastName = '';
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchStaffName();
+  }
+
+  Future<void> _fetchStaffName() async {
+    setState(() { isLoading = true; });
+    try {
+      final email = await UserService.getStaffEmail();
+      if (email != null && email.isNotEmpty && email != 'N/A') {
+        final idUrl = Uri.parse('https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/api/Staff/get-id-by-email/$email');
+        final idResponse = await http.get(idUrl);
+        if (idResponse.statusCode == 200) {
+          final idData = jsonDecode(idResponse.body);
+          final staffId = idData['staffId']?.toString() ?? idData['StaffID']?.toString();
+          if (staffId != null && staffId.isNotEmpty) {
+            final detailsUrl = Uri.parse('https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/api/Staff/$staffId');
+            final detailsResponse = await http.get(detailsUrl);
+            if (detailsResponse.statusCode == 200) {
+              final detailsData = jsonDecode(detailsResponse.body);
+              setState(() {
+                staffFirstName = detailsData['firstName']?.toString() ?? detailsData['FirstName']?.toString() ?? '';
+                staffLastName = detailsData['lastName']?.toString() ?? detailsData['LastName']?.toString() ?? '';
+                isLoading = false;
+              });
+              return;
+            }
+          }
+        }
+      }
+    } catch (e) {}
+    setState(() { isLoading = false; });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,16 +66,24 @@ class _MoreScreenState extends State<MoreScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   child: Column(
-                    children: const [
-                      CircleAvatar(
+                    children: [
+                      const CircleAvatar(
                         radius: 36,
                         backgroundColor: Colors.black,
                         child: Icon(Icons.person, size: 44, color: Colors.white),
                       ),
-                      SizedBox(height: 8),
-                      Text(
-                        "Peter Parker",
-                        style: TextStyle(
+                      const SizedBox(height: 8),
+                      isLoading
+                          ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                          : Text(
+                        (staffFirstName.isNotEmpty || staffLastName.isNotEmpty)
+                            ? '$staffFirstName $staffLastName'
+                            : '',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,

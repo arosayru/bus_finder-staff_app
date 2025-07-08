@@ -15,6 +15,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int currentIndex = 0;
   String staffId = 'N/A';
   bool isLoading = true;
+  String staffFirstName = '';
+  String staffLastName = '';
 
   @override
   void initState() {
@@ -24,31 +26,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _fetchStaffId() async {
     try {
-      final localStaffId = await UserService.getStaffId();
-      if (localStaffId != null && localStaffId != 'N/A') {
-        final url = Uri.parse('https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/api/staff/$localStaffId');
-        final response = await http.get(url);
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          setState(() {
-            staffId = data['staffId']?.toString() ?? data['StaffID']?.toString() ?? localStaffId;
-            isLoading = false;
-          });
-        } else {
-          setState(() {
-            staffId = localStaffId;
-            isLoading = false;
-          });
+      final email = await UserService.getStaffEmail();
+      if (email != null && email.isNotEmpty && email != 'N/A') {
+        // Step 1: Get staffId by email
+        final idUrl = Uri.parse('https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/api/Staff/get-id-by-email/$email');
+        final idResponse = await http.get(idUrl);
+        if (idResponse.statusCode == 200) {
+          final idData = jsonDecode(idResponse.body);
+          final fetchedStaffId = idData['staffId']?.toString() ?? idData['StaffID']?.toString();
+          if (fetchedStaffId != null && fetchedStaffId.isNotEmpty) {
+            // Step 2: Get staff details by staffId
+            final detailsUrl = Uri.parse('https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/api/Staff/$fetchedStaffId');
+            final detailsResponse = await http.get(detailsUrl);
+            if (detailsResponse.statusCode == 200) {
+              final detailsData = jsonDecode(detailsResponse.body);
+              setState(() {
+                staffId = fetchedStaffId;
+                staffFirstName = detailsData['firstName']?.toString() ?? detailsData['FirstName']?.toString() ?? '';
+                staffLastName = detailsData['lastName']?.toString() ?? detailsData['LastName']?.toString() ?? '';
+                isLoading = false;
+              });
+              return;
+            }
+            // If details fetch fails, fallback to just staffId
+            setState(() {
+              staffId = fetchedStaffId;
+              staffFirstName = '';
+              staffLastName = '';
+              isLoading = false;
+            });
+            return;
+          }
         }
+        // If staffId fetch fails, fallback to email
+        setState(() {
+          staffId = email;
+          staffFirstName = '';
+          staffLastName = '';
+          isLoading = false;
+        });
       } else {
         setState(() {
           staffId = 'N/A';
+          staffFirstName = '';
+          staffLastName = '';
           isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
         staffId = 'N/A';
+        staffFirstName = '';
+        staffLastName = '';
         isLoading = false;
       });
     }
@@ -91,7 +120,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                                 : Text(
-                              'Hi $staffId,',
+                              staffFirstName.isNotEmpty || staffLastName.isNotEmpty
+                                  ? 'Hi $staffFirstName $staffLastName,'
+                                  : 'Hi $staffId,',
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
