@@ -30,6 +30,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _originalFirstName;
   String? _originalLastName;
   String? _originalEmail;
+  String? _profilePictureUrl;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -39,35 +40,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _fetchAndSetProfileData();
   }
 
+  Future<String?> _getStaffIdByEmail(String email) async {
+    final idUrl = Uri.parse('https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/api/Staff/get-id-by-email/$email');
+    final idResponse = await http.get(idUrl);
+    if (idResponse.statusCode == 200) {
+      final idData = jsonDecode(idResponse.body);
+      return idData['staffId']?.toString() ?? idData['StaffID']?.toString();
+    }
+    return null;
+  }
+
   Future<void> _fetchAndSetProfileData() async {
     setState(() => _isProfileLoading = true);
     try {
       final email = await UserService.getStaffEmail();
       if (email != null && email.isNotEmpty && email != 'N/A') {
-        // Step 1: Get staffId by email
-        final idUrl = Uri.parse('https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/api/Staff/get-id-by-email/$email');
-        final idResponse = await http.get(idUrl);
-        if (idResponse.statusCode == 200) {
-          final idData = jsonDecode(idResponse.body);
-          final fetchedStaffId = idData['staffId']?.toString() ?? idData['StaffID']?.toString();
-          if (fetchedStaffId != null && fetchedStaffId.isNotEmpty) {
-            // Step 2: Get staff details by staffId
-            final detailsUrl = Uri.parse('https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/api/Staff/$fetchedStaffId');
-            final detailsResponse = await http.get(detailsUrl);
-            if (detailsResponse.statusCode == 200) {
-              final detailsData = jsonDecode(detailsResponse.body);
-              final firstName = detailsData['firstName']?.toString() ?? detailsData['FirstName']?.toString() ?? '';
-              final lastName = detailsData['lastName']?.toString() ?? detailsData['LastName']?.toString() ?? '';
-              final emailVal = detailsData['email']?.toString() ?? detailsData['Email']?.toString() ?? '';
-              setState(() {
-                _firstNameController.text = firstName;
-                _lastNameController.text = lastName;
-                _emailController.text = emailVal;
-                _originalFirstName = firstName;
-                _originalLastName = lastName;
-                _originalEmail = emailVal;
-              });
-            }
+        final staffId = await _getStaffIdByEmail(email);
+        if (staffId != null && staffId.isNotEmpty) {
+          final detailsUrl = Uri.parse('https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/api/Staff/$staffId');
+          final detailsResponse = await http.get(detailsUrl);
+          if (detailsResponse.statusCode == 200) {
+            final detailsData = jsonDecode(detailsResponse.body);
+            final firstName = detailsData['firstName']?.toString() ?? detailsData['FirstName']?.toString() ?? '';
+            final lastName = detailsData['lastName']?.toString() ?? detailsData['LastName']?.toString() ?? '';
+            final emailVal = detailsData['email']?.toString() ?? detailsData['Email']?.toString() ?? '';
+            final profilePicture = detailsData['profilePicture']?.toString() ?? '';
+            setState(() {
+              _firstNameController.text = firstName;
+              _lastNameController.text = lastName;
+              _emailController.text = emailVal;
+              _originalFirstName = firstName;
+              _originalLastName = lastName;
+              _originalEmail = emailVal;
+              _profilePictureUrl = profilePicture;
+            });
           }
         }
       }
@@ -85,63 +91,202 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _updateProfileDetails() async {
+    print('DEBUG: Starting profile update process');
     setState(() => _isUploading = true);
     try {
-      final staffId = await UserService.getStaffId();
+      print('DEBUG: Fetching staff email...');
+      final email = await UserService.getStaffEmail();
+      print('DEBUG: Staff email retrieved: $email');
+
+      if (email == null || email.isEmpty || email == 'N/A') {
+        print('DEBUG: Staff email is null, empty, or N/A');
+        setState(() => _isUploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Staff email not found'), duration: Duration(seconds: 2)),
+        );
+        return;
+      }
+
+      print('DEBUG: Fetching staff ID by email...');
+      final staffId = await _getStaffIdByEmail(email);
+      print('DEBUG: Staff ID retrieved: $staffId');
+
       if (staffId == null || staffId.isEmpty) {
+        print('DEBUG: Failed to get staff ID by email');
+        setState(() => _isUploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to get staff ID'), duration: Duration(seconds: 2)),
+        );
+        return;
+      }
+      print('DEBUG: Staff ID retrieved: $staffId');
+
+      if (staffId == null || staffId.isEmpty || staffId == 'N/A') {
+        print('DEBUG: Staff ID is null, empty, or N/A');
         setState(() => _isUploading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Staff ID not found'), duration: Duration(seconds: 2)),
         );
         return;
       }
-      // Compare fields and only send changed ones
-      final Map<String, dynamic> updatedFields = {};
+
+      // Fetch current staff data to preserve unchanged fields
+      print('DEBUG: Fetching current staff data...');
+      final detailsUrl = Uri.parse('https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/api/Staff/$staffId');
+      final detailsResponse = await http.get(detailsUrl);
+      print('DEBUG: Staff details response status: ${detailsResponse.statusCode}');
+      print('DEBUG: Staff details response body: ${detailsResponse.body}');
+
+      if (detailsResponse.statusCode != 200) {
+        print('DEBUG: Failed to get current staff data');
+        setState(() => _isUploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to get current staff data: ${detailsResponse.body}'), duration: const Duration(seconds: 2)),
+        );
+        return;
+      }
+
+      final currentStaffData = jsonDecode(detailsResponse.body);
+      print('DEBUG: Current staff data: $currentStaffData');
+
+      // Compare fields and prepare complete update data
+      print('DEBUG: Comparing field values...');
+      print('DEBUG: Original firstName: $_originalFirstName, Current: ${_firstNameController.text.trim()}');
+      print('DEBUG: Original lastName: $_originalLastName, Current: ${_lastNameController.text.trim()}');
+      print('DEBUG: Original email: $_originalEmail, Current: ${_emailController.text.trim()}');
+
+      // Start with current staff data and update only changed fields
+      final Map<String, dynamic> completeUpdateData = Map<String, dynamic>.from(currentStaffData);
+
+      bool hasChanges = false;
       if (_firstNameController.text.trim() != (_originalFirstName ?? '')) {
-        updatedFields['firstName'] = _firstNameController.text.trim();
+        completeUpdateData['firstName'] = _firstNameController.text.trim();
+        print('DEBUG: firstName will be updated');
+        hasChanges = true;
       }
       if (_lastNameController.text.trim() != (_originalLastName ?? '')) {
-        updatedFields['lastName'] = _lastNameController.text.trim();
+        completeUpdateData['lastName'] = _lastNameController.text.trim();
+        print('DEBUG: lastName will be updated');
+        hasChanges = true;
       }
       if (_emailController.text.trim() != (_originalEmail ?? '')) {
-        updatedFields['email'] = _emailController.text.trim();
+        completeUpdateData['email'] = _emailController.text.trim();
+        print('DEBUG: email will be updated');
+        hasChanges = true;
       }
-      if (updatedFields.isEmpty) {
+
+      print('DEBUG: Complete update data: $completeUpdateData');
+
+      if (!hasChanges) {
+        print('DEBUG: No fields to update');
         setState(() => _isUploading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No changes to update.'), duration: Duration(seconds: 2)),
         );
         return;
       }
+
       final uri = Uri.parse('https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/api/Staff/$staffId');
-      final body = jsonEncode(updatedFields);
+      final body = jsonEncode(completeUpdateData);
+      print('DEBUG: Making PUT request to: $uri');
+      print('DEBUG: Request body: $body');
+
       final response = await http.put(
         uri,
         headers: {'Content-Type': 'application/json'},
         body: body,
       );
+
+      print('DEBUG: Response status code: ${response.statusCode}');
+      print('DEBUG: Response body: ${response.body}');
+
       setState(() => _isUploading = false);
-      if (response.statusCode == 200) {
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print('DEBUG: Profile update successful (status: ${response.statusCode})');
         // Update originals to new values
         setState(() {
           _originalFirstName = _firstNameController.text.trim();
           _originalLastName = _lastNameController.text.trim();
           _originalEmail = _emailController.text.trim();
         });
+        print('DEBUG: Original values updated');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully'), duration: Duration(seconds: 2)),
         );
       } else {
+        print('DEBUG: Profile update failed with status: ${response.statusCode}');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to update profile: ${response.body}'), duration: const Duration(seconds: 2)),
         );
       }
     } catch (e) {
+      print('DEBUG: Exception occurred during profile update: $e');
       setState(() => _isUploading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e'), duration: const Duration(seconds: 2)),
       );
     }
+  }
+
+  Future<bool> _uploadProfilePicture(String staffId) async {
+    if (_profileImage == null) return false;
+    try {
+      final uri = Uri.parse('https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/api/Staff/$staffId/update-profile-picture');
+      var request = http.MultipartRequest('POST', uri);
+      request.files.add(await http.MultipartFile.fromPath('profilePicture', _profileImage!.path));
+      var response = await request.send();
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        print('DEBUG: Profile picture uploaded successfully');
+        return true;
+      } else {
+        print('DEBUG: Failed to upload profile picture: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('DEBUG: Exception during profile picture upload: $e');
+      return false;
+    }
+  }
+
+  Future<void> _updateProfileDetailsAndPicture() async {
+    setState(() => _isUploading = true);
+    try {
+      final email = await UserService.getStaffEmail();
+      if (email == null || email.isEmpty || email == 'N/A') {
+        setState(() => _isUploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Staff email not found'), duration: Duration(seconds: 2)),
+        );
+        return;
+      }
+
+      final staffId = await _getStaffIdByEmail(email);
+      if (staffId == null || staffId.isEmpty || staffId == 'N/A') {
+        setState(() => _isUploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Staff ID not found'), duration: Duration(seconds: 2)),
+        );
+        return;
+      }
+
+      // Update profile details first
+      await _updateProfileDetails();
+
+      // Upload profile picture if selected
+      if (_profileImage != null) {
+        await _uploadProfilePicture(staffId);
+      }
+
+      // Refresh profile data to show updated picture
+      await _fetchAndSetProfileData();
+    } catch (e) {
+      print('DEBUG: Exception in _updateProfileDetailsAndPicture: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), duration: const Duration(seconds: 2)),
+      );
+    }
+    setState(() => _isUploading = false);
   }
 
   @override
@@ -235,8 +380,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 backgroundColor: const Color(0xFFFB9933),
                                 backgroundImage: _profileImage != null
                                     ? FileImage(_profileImage!)
+                                    : (_profilePictureUrl != null && _profilePictureUrl!.isNotEmpty)
+                                    ? NetworkImage(_profilePictureUrl!)
                                     : null,
-                                child: _profileImage == null
+                                child: (_profileImage == null && (_profilePictureUrl == null || _profilePictureUrl!.isEmpty))
                                     ? const Icon(Icons.person, size: 48, color: Colors.white)
                                     : null,
                               ),
@@ -285,9 +432,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             width: double.infinity,
                             height: 45,
                             child: ElevatedButton(
-                              onPressed: _isUploading ? null : () async {
-                                await _updateProfileDetails();
-                              },
+                              onPressed: _isUploading ? null : _updateProfileDetailsAndPicture,
                               style: ElevatedButton.styleFrom(
                                 elevation: 3,
                                 shape: RoundedRectangleBorder(
@@ -397,5 +542,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
+
+
 
 
