@@ -17,9 +17,13 @@ dependencies:
   http: ^1.1.0
   shared_preferences: ^2.2.2
   url_launcher: ^6.2.4
+  google_maps_flutter: ^2.5.3
+  geolocator: ^14.0.2
+  geocoding: ^4.0.0
 
 
   cupertino_icons: ^1.0.8
+  flutter_polyline_points: 2.1.0
 
 dev_dependencies:
   flutter_test:
