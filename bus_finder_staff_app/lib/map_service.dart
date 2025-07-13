@@ -2,21 +2,135 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
+import 'user_service.dart';
 
 class MapService {
   static const String baseUrl = 'https://bus-finder-sl-a7c6a549fbb1.herokuapp.com';
   static const String liveBusShiftEndpoint = '/api/Map/staff-view-live-bus-shift';
 
-  // Fetch live bus shift data for a specific bus and route (hardcoded for testing)
-  static Future<Map<String, dynamic>> getLiveBusShiftData({
-    String? busRoute,
-    String? bus,
-  }) async {
+  // Get staff ID by email
+  static Future<String?> _getStaffIdByEmail(String email) async {
     try {
-      // Hardcoded endpoint for testing
+      final idUrl = Uri.parse('$baseUrl/api/Staff/get-id-by-email/$email');
+      final idResponse = await http.get(idUrl);
+      if (idResponse.statusCode == 200) {
+        final idData = jsonDecode(idResponse.body);
+        return idData['staffId']?.toString() ?? idData['StaffID']?.toString();
+      }
+      return null;
+    } catch (e) {
+      print('Error getting staff ID by email: $e');
+      return null;
+    }
+  }
+
+  // Get bus details by staff ID
+  static Future<Map<String, String>?> _getBusDetailsByStaffId(String staffId) async {
+    try {
+      final busUrl = Uri.parse('$baseUrl/api/Bus/by-staff/$staffId');
+      print('DEBUG: Fetching bus details from: $busUrl');
+
+      final busResponse = await http.get(busUrl);
+      print('DEBUG: Bus details response status: ${busResponse.statusCode}');
+      print('DEBUG: Bus details response body: ${busResponse.body}');
+
+      if (busResponse.statusCode == 200) {
+        final responseData = jsonDecode(busResponse.body);
+        print('DEBUG: Parsed response data: $responseData');
+
+        // Handle both array and single object responses
+        List<dynamic> busList;
+        if (responseData is List) {
+          busList = responseData;
+        } else {
+          busList = [responseData];
+        }
+
+        print('DEBUG: Bus list length: ${busList.length}');
+
+        if (busList.isNotEmpty) {
+          // Use the first bus in the list
+          final busData = busList[0];
+          print('DEBUG: Using first bus data: $busData');
+
+          // Filter only numberPlate and busRouteNumber
+          String? numberPlate;
+          String? busRouteNumber;
+
+          // Handle different possible field names
+          numberPlate = busData['numberPlate']?.toString() ??
+              busData['NumberPlate']?.toString() ??
+              busData['number_plate']?.toString();
+
+          busRouteNumber = busData['busRouteNumber']?.toString() ??
+              busData['BusRouteNumber']?.toString() ??
+              busData['bus_route_number']?.toString();
+
+          print('DEBUG: Extracted numberPlate: $numberPlate');
+          print('DEBUG: Extracted busRouteNumber: $busRouteNumber');
+
+          if (numberPlate != null && busRouteNumber != null) {
+            return {
+              'numberPlate': numberPlate,
+              'busRouteNumber': busRouteNumber,
+            };
+          } else {
+            print('DEBUG: Missing required bus details - numberPlate: $numberPlate, busRouteNumber: $busRouteNumber');
+          }
+        } else {
+          print('DEBUG: No buses found in the response');
+        }
+      } else {
+        print('DEBUG: Failed to get bus details - status: ${busResponse.statusCode}');
+      }
+      return null;
+    } catch (e) {
+      print('Error getting bus details by staff ID: $e');
+      return null;
+    }
+  }
+
+  // Fetch live bus shift data for the logged-in staff member
+  static Future<Map<String, dynamic>> getLiveBusShiftData() async {
+    try {
+      print('DEBUG: Starting getLiveBusShiftData - automatic mode');
+
+      // Get staff email from UserService
+      final email = await UserService.getStaffEmail();
+      print('DEBUG: Retrieved staff email: $email');
+
+      if (email == null || email.isEmpty || email == 'N/A') {
+        throw Exception('Staff email not found. Please ensure you are logged in.');
+      }
+
+      // Get staff ID by email
+      final staffId = await _getStaffIdByEmail(email);
+      print('DEBUG: Retrieved staff ID: $staffId');
+
+      if (staffId == null || staffId.isEmpty) {
+        throw Exception('Failed to get staff ID for email: $email');
+      }
+
+      // Get bus details by staff ID
+      final busDetails = await _getBusDetailsByStaffId(staffId);
+      print('DEBUG: Retrieved bus details: $busDetails');
+
+      if (busDetails == null) {
+        throw Exception('No bus assigned to staff ID: $staffId');
+      }
+
+      final numberPlate = busDetails['numberPlate']!;
+      final busRouteNumber = busDetails['busRouteNumber']!;
+
+      print('DEBUG: Using bus details - Number Plate: $numberPlate, Route: $busRouteNumber');
+
+      // Build the endpoint with the actual bus details
       final uri = Uri.parse(
-        '$baseUrl$liveBusShiftEndpoint?busRoute=174&bus=BN%20-%201315',
+        '$baseUrl$liveBusShiftEndpoint?busRoute=$busRouteNumber&bus=${Uri.encodeComponent(numberPlate)}',
       );
+
+      print('DEBUG: Making request to: $uri');
+
       final response = await http.get(
         uri,
         headers: {
@@ -24,8 +138,70 @@ class MapService {
         },
       );
 
-      print('Response status:  [${response.statusCode}');
-      print('Response body:  [${response.body}');
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200 && response.body.isNotEmpty) {
+        final decoded = json.decode(response.body);
+        if (decoded == null || decoded is! Map<String, dynamic>) {
+          throw Exception('API did not return a valid map');
+        }
+        return decoded;
+      } else {
+        throw Exception('Failed to load live bus shift data: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('DEBUG: Exception in getLiveBusShiftData: $e');
+      throw Exception('Error fetching live bus shift data: $e');
+    }
+  }
+
+  // Legacy method for backward compatibility (keeps the old signature)
+  static Future<Map<String, dynamic>> getLiveBusShiftDataWithParams({
+    String? busRoute,
+    String? bus,
+  }) async {
+    try {
+      // Use provided parameters or fall back to automatic detection
+      String? finalBusRoute = busRoute;
+      String? finalBus = bus;
+
+      if (finalBusRoute == null || finalBus == null) {
+        // Get staff email from UserService
+        final email = await UserService.getStaffEmail();
+        if (email == null || email.isEmpty || email == 'N/A') {
+          throw Exception('Staff email not found. Please ensure you are logged in.');
+        }
+
+        // Get staff ID by email
+        final staffId = await _getStaffIdByEmail(email);
+        if (staffId == null || staffId.isEmpty) {
+          throw Exception('Failed to get staff ID for email: $email');
+        }
+
+        // Get bus details by staff ID
+        final busDetails = await _getBusDetailsByStaffId(staffId);
+        if (busDetails == null) {
+          throw Exception('No bus assigned to staff ID: $staffId');
+        }
+
+        finalBusRoute = busDetails['busRouteNumber'];
+        finalBus = busDetails['numberPlate'];
+      }
+
+      final uri = Uri.parse(
+        '$baseUrl$liveBusShiftEndpoint?busRoute=$finalBusRoute&bus=${Uri.encodeComponent(finalBus!)}',
+      );
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
       if (response.statusCode == 200 && response.body.isNotEmpty) {
         final decoded = json.decode(response.body);

@@ -53,11 +53,8 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
         _polylines.clear();
       });
 
-      // Fetch the main config (from your endpoint)
-      final mapDataRaw = await MapService.getLiveBusShiftData(
-        busRoute: widget.busRoute.toString(),
-        bus: widget.bus.toString(),
-      );
+      // Fetch the main config (automatically gets bus details for logged-in staff)
+      final mapDataRaw = await MapService.getLiveBusShiftData();
 
       // If the response is a list, use the first element
       final mapData = (mapDataRaw is List && mapDataRaw.isNotEmpty)
