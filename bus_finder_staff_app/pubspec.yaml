@@ -20,7 +20,8 @@ dependencies:
   google_maps_flutter: ^2.5.3
   geolocator: ^14.0.2
   geocoding: ^4.0.0
-
+  signalr_netcore: ^1.3.5
+  web_socket_channel: 3.0.3
 
   cupertino_icons: ^1.0.8
   flutter_polyline_points: 2.1.0

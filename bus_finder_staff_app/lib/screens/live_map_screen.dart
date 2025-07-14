@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:geolocator/geolocator.dart';
+import '../user_service.dart';
 import '/map_service.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:signalr_netcore/signalr_client.dart';
 
 class LiveMapScreen extends StatefulWidget {
   final dynamic busRoute;
@@ -30,18 +32,110 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
+  // SignalR fields
+  HubConnection? _hubConnection;
+  final Map<String, gmaps.Marker> _busMarkers = {};
+
   // Default camera position (Colombo, Sri Lanka)
   gmaps.CameraPosition _initialCameraPosition = const gmaps.CameraPosition(
     target: gmaps.LatLng(6.9271, 79.8612),
     zoom: 12.0,
   );
 
+  String? _targetBusNumberPlate;
+
   @override
   void initState() {
     super.initState();
     print('BusRoute: ${widget.busRoute}');
     print('Bus: ${widget.bus}');
-    _loadMapData();
+    _setTargetBusNumberPlate();
+  }
+
+  Future<void> _setTargetBusNumberPlate() async {
+    final email = await UserService.getStaffEmail();
+    if (email == null) return;
+    final staffId = await MapService.getStaffIdByEmail(email);
+    if (staffId == null) return;
+    final busDetails = await MapService.getBusDetailsByStaffId(staffId);
+    if (busDetails == null) return;
+    setState(() {
+      _targetBusNumberPlate = busDetails['numberPlate'];
+      print('[DEBUG] _targetBusNumberPlate set to: $_targetBusNumberPlate');
+    });
+    await _loadMapData();
+    _initSignalR();
+  }
+
+  @override
+  void dispose() {
+    _hubConnection?.stop();
+    super.dispose();
+  }
+
+  void _initSignalR() async {
+    // Use production URL or localhost as needed
+    final hubUrl = 'https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/busHub';
+    print('[SignalR] Initializing connection to: $hubUrl');
+    _hubConnection = HubConnectionBuilder()
+        .withUrl(hubUrl)
+        .build();
+
+    _hubConnection?.on('BusLocationUpdated', _onBusLocationUpdated);
+    _hubConnection?.on('ReceiveBusUpdate', (args) {
+      print('[SignalR] Old format message: $args');
+    });
+
+    _hubConnection?.onclose(({error}) {
+      print('[SignalR] Connection closed: $error');
+    });
+
+    try {
+      await _hubConnection?.start();
+      print('[SignalR] Connected!');
+    } catch (e) {
+      print('[SignalR] Connection Error: $e');
+    }
+  }
+
+  void _onBusLocationUpdated(List<Object?>? args) {
+    print('[SignalR] BusLocationUpdated event: $args');
+    if (args == null || args.length < 3) return;
+    final busId = args[0]?.toString() ?? '';
+    final latitude = double.tryParse(args[1]?.toString() ?? '');
+    final longitude = double.tryParse(args[2]?.toString() ?? '');
+    print('[SignalR] Received busId: $busId, _targetBusNumberPlate: $_targetBusNumberPlate');
+    if (busId.isEmpty || latitude == null || longitude == null) {
+      print('[SignalR] Invalid bus update payload, ignoring.');
+      return;
+    }
+    if (_targetBusNumberPlate != null && busId != _targetBusNumberPlate) {
+      print('[SignalR] Ignoring update for busId $busId (not target $_targetBusNumberPlate)');
+      return;
+    }
+    print('[SignalR] ACCEPTED update for busId $busId');
+    print('[SignalR] Updating bus marker: id=$busId, lat=$latitude, lng=$longitude');
+    _updateBusMarker(busId, latitude, longitude);
+  }
+
+  void _updateBusMarker(String busId, double latitude, double longitude) {
+    print('[Map] Placing/updating bus marker: id=$busId, lat=$latitude, lng=$longitude');
+    final latLng = gmaps.LatLng(latitude, longitude);
+    final markerId = gmaps.MarkerId('bus_$busId');
+    final marker = gmaps.Marker(
+      markerId: markerId,
+      position: latLng,
+      icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(gmaps.BitmapDescriptor.hueGreen),
+      infoWindow: gmaps.InfoWindow(
+        title: 'Bus $busId',
+        snippet: 'Live location',
+      ),
+    );
+    setState(() {
+      _busMarkers[busId] = marker;
+      _markers.removeWhere((m) => m.markerId == markerId);
+      _markers.add(marker);
+    });
   }
 
   Future<void> _loadMapData() async {
@@ -60,6 +154,9 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       final mapData = (mapDataRaw is List && mapDataRaw.isNotEmpty)
           ? mapDataRaw[0]
           : mapDataRaw;
+
+      print('[DEBUG] mapData: $mapData');
+      // No longer set _targetBusNumberPlate here
 
       _mapConfig = MapConfiguration.fromJson(mapData);
 
@@ -505,5 +602,3 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     );
   }
 }
-
-

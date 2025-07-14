@@ -9,7 +9,7 @@ class MapService {
   static const String liveBusShiftEndpoint = '/api/Map/staff-view-live-bus-shift';
 
   // Get staff ID by email
-  static Future<String?> _getStaffIdByEmail(String email) async {
+  static Future<String?> getStaffIdByEmail(String email) async {
     try {
       final idUrl = Uri.parse('$baseUrl/api/Staff/get-id-by-email/$email');
       final idResponse = await http.get(idUrl);
@@ -25,7 +25,7 @@ class MapService {
   }
 
   // Get bus details by staff ID
-  static Future<Map<String, String>?> _getBusDetailsByStaffId(String staffId) async {
+  static Future<Map<String, String>?> getBusDetailsByStaffId(String staffId) async {
     try {
       final busUrl = Uri.parse('$baseUrl/api/Bus/by-staff/$staffId');
       print('DEBUG: Fetching bus details from: $busUrl');
@@ -104,7 +104,7 @@ class MapService {
       }
 
       // Get staff ID by email
-      final staffId = await _getStaffIdByEmail(email);
+      final staffId = await getStaffIdByEmail(email);
       print('DEBUG: Retrieved staff ID: $staffId');
 
       if (staffId == null || staffId.isEmpty) {
@@ -112,7 +112,7 @@ class MapService {
       }
 
       // Get bus details by staff ID
-      final busDetails = await _getBusDetailsByStaffId(staffId);
+      final busDetails = await getBusDetailsByStaffId(staffId);
       print('DEBUG: Retrieved bus details: $busDetails');
 
       if (busDetails == null) {
@@ -174,13 +174,13 @@ class MapService {
         }
 
         // Get staff ID by email
-        final staffId = await _getStaffIdByEmail(email);
+        final staffId = await getStaffIdByEmail(email);
         if (staffId == null || staffId.isEmpty) {
           throw Exception('Failed to get staff ID for email: $email');
         }
 
         // Get bus details by staff ID
-        final busDetails = await _getBusDetailsByStaffId(staffId);
+        final busDetails = await getBusDetailsByStaffId(staffId);
         if (busDetails == null) {
           throw Exception('No bus assigned to staff ID: $staffId');
         }
