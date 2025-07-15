@@ -80,7 +80,7 @@ The app is designed to streamline bus operations and provide real-time informati
     {
       "title": "Map Not Showing",
       "description": "Fix map display issues",
-      "action": "Enable location services → Check GPS → Refresh map → Restart app"
+      "action": "Enable location service → Check GPS → Refresh map → Restart app"
     },
     {
       "title": "Notifications Not Working",

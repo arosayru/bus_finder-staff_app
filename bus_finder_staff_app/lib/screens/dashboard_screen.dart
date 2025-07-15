@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../user_service.dart';
+import '/service/gps_service.dart'; // Import the GPS service
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -11,7 +12,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  bool isGpsEnabled = false;
+  late GpsService _gpsService;
   int currentIndex = 0;
   String staffId = 'N/A';
   bool isLoading = true;
@@ -21,7 +22,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchStaffId();
+    _gpsService = GpsService();
+    _initializeServices();
+  }
+
+  Future<void> _initializeServices() async {
+    // Initialize GPS service first
+    await _gpsService.initialize();
+    // Then fetch staff ID
+    await _fetchStaffId();
   }
 
   Future<void> _fetchStaffId() async {
@@ -159,6 +168,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     child: Column(
                       children: [
+                        // GPS Toggle Container - Now using global GPS service
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 25),
                           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
@@ -169,41 +179,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                isGpsEnabled ? "GPS Enabled" : "GPS Disabled",
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              // Using AnimatedBuilder to listen to GPS service changes
+                              AnimatedBuilder(
+                                animation: _gpsService,
+                                builder: (context, child) {
+                                  return Text(
+                                    _gpsService.isGpsEnabled ? "GPS Enabled" : "GPS Disabled",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  );
+                                },
                               ),
                               GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    isGpsEnabled = !isGpsEnabled;
-                                  });
+                                onTap: () async {
+                                  // Toggle GPS using the global service
+                                  await _gpsService.toggleGps();
                                 },
-                                child: Container(
-                                  width: 52,
-                                  height: 30,
-                                  padding: const EdgeInsets.all(2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: AnimatedAlign(
-                                    alignment: isGpsEnabled ? Alignment.centerRight : Alignment.centerLeft,
-                                    duration: const Duration(milliseconds: 200),
-                                    child: Container(
-                                      width: 24,
-                                      height: 24,
+                                child: AnimatedBuilder(
+                                  animation: _gpsService,
+                                  builder: (context, child) {
+                                    return Container(
+                                      width: 52,
+                                      height: 30,
+                                      padding: const EdgeInsets.all(2),
                                       decoration: BoxDecoration(
-                                        color: isGpsEnabled
-                                            ? const Color(0xFF23C51E)
-                                            : const Color(0xFFC51E1E),
-                                        shape: BoxShape.circle,
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
                                       ),
-                                    ),
-                                  ),
+                                      child: AnimatedAlign(
+                                        alignment: _gpsService.isGpsEnabled
+                                            ? Alignment.centerRight
+                                            : Alignment.centerLeft,
+                                        duration: const Duration(milliseconds: 200),
+                                        child: Container(
+                                          width: 24,
+                                          height: 24,
+                                          decoration: BoxDecoration(
+                                            color: _gpsService.isGpsEnabled
+                                                ? const Color(0xFF23C51E)
+                                                : const Color(0xFFC51E1E),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             ],
@@ -284,7 +306,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 if (index == 0) {
                   // Already on dashboard, do nothing
                 } else if (index == 1) {
-                  Navigator.pushNamed(context, 'live-map'); // Replace with your route name
+                  Navigator.pushNamed(context, 'live-map');
                 } else if (index == 2) {
                   Navigator.pushNamed(context, 'notification');
                 } else if (index == 3) {
@@ -371,4 +393,3 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 }
-
