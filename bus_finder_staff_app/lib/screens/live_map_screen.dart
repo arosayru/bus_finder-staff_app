@@ -6,7 +6,8 @@ import '/map_service.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:signalr_netcore/signalr_client.dart';
+import 'dart:async';
+import 'dart:io'; // Added for SocketException
 
 class LiveMapScreen extends StatefulWidget {
   final dynamic busRoute;
@@ -32,10 +33,6 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
-  // SignalR fields
-  HubConnection? _hubConnection;
-  final Map<String, gmaps.Marker> _busMarkers = {};
-
   // Default camera position (Colombo, Sri Lanka)
   gmaps.CameraPosition _initialCameraPosition = const gmaps.CameraPosition(
     target: gmaps.LatLng(6.9271, 79.8612),
@@ -43,79 +40,323 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   );
 
   String? _targetBusNumberPlate;
+  Timer? _locationUpdateTimer;
+  StreamSubscription<Position>? _gpsSubscription;
 
   @override
   void initState() {
     super.initState();
+    print('[DEBUG] LiveMapScreen initState called');
     print('BusRoute: ${widget.busRoute}');
     print('Bus: ${widget.bus}');
     _setTargetBusNumberPlate();
   }
 
   Future<void> _setTargetBusNumberPlate() async {
-    final email = await UserService.getStaffEmail();
-    if (email == null) return;
-    final staffId = await MapService.getStaffIdByEmail(email);
-    if (staffId == null) return;
-    final busDetails = await MapService.getBusDetailsByStaffId(staffId);
-    if (busDetails == null) return;
-    setState(() {
-      _targetBusNumberPlate = busDetails['numberPlate'];
-      print('[DEBUG] _targetBusNumberPlate set to: $_targetBusNumberPlate');
-    });
-    await _loadMapData();
-    _initSignalR();
+    print('[DEBUG] _setTargetBusNumberPlate called');
+    try {
+      final email = await UserService.getStaffEmail();
+      print('[DEBUG] Got staff email: $email');
+      if (email == null) {
+        print('[DEBUG] Staff email is null, aborting.');
+        setState(() {
+          _errorMessage = 'Staff email not found. Please login again.';
+        });
+        return;
+      }
+
+      final staffId = await MapService.getStaffIdByEmail(email);
+      print('[DEBUG] Got staffId: $staffId');
+      if (staffId == null) {
+        print('[DEBUG] Staff ID is null, aborting.');
+        setState(() {
+          _errorMessage = 'Staff ID not found for email: $email';
+        });
+        return;
+      }
+
+      final busDetails = await MapService.getBusDetailsByStaffId(staffId);
+      print('[DEBUG] Got busDetails: $busDetails');
+      if (busDetails == null) {
+        print('[DEBUG] busDetails is null, aborting.');
+        setState(() {
+          _errorMessage = 'Bus details not found for staff ID: $staffId';
+        });
+        return;
+      }
+
+      setState(() {
+        _targetBusNumberPlate = busDetails['numberPlate'];
+        print('[DEBUG] _targetBusNumberPlate set to: $_targetBusNumberPlate');
+      });
+
+      await _loadMapData();
+      print('[DEBUG] Calling _subscribeToGpsUpdates');
+      await _subscribeToGpsUpdates();
+    } catch (e) {
+      print('[DEBUG] Error in _setTargetBusNumberPlate: $e');
+      setState(() {
+        _errorMessage = 'Failed to initialize: $e';
+      });
+    }
   }
 
   @override
   void dispose() {
-    _hubConnection?.stop();
+    _gpsSubscription?.cancel();
+    _locationUpdateTimer?.cancel();
     super.dispose();
   }
 
-  void _initSignalR() async {
-    // Use production URL or localhost as needed
-    final hubUrl = 'https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/busHub';
-    print('[SignalR] Initializing connection to: $hubUrl');
-    _hubConnection = HubConnectionBuilder()
-        .withUrl(hubUrl)
-        .build();
+  // Test endpoint to verify bus exists in database
+  Future<void> _testEndpoint() async {
+    if (_targetBusNumberPlate == null) return;
 
-    _hubConnection?.on('BusLocationUpdated', _onBusLocationUpdated);
-    _hubConnection?.on('ReceiveBusUpdate', (args) {
-      print('[SignalR] Old format message: $args');
-    });
-
-    _hubConnection?.onclose(({error}) {
-      print('[SignalR] Connection closed: $error');
-    });
+    final baseUrl = 'https://bus-finder-sl-a7c6a549fbb1.herokuapp.com';
+    final encodedNumberPlate = Uri.encodeComponent(_targetBusNumberPlate!);
+    final url = Uri.parse('$baseUrl/api/Bus/$encodedNumberPlate');
 
     try {
-      await _hubConnection?.start();
-      print('[SignalR] Connected!');
+      // First, try to GET the bus info to see if the endpoint is reachable
+      final response = await http.get(url).timeout(const Duration(seconds: 10));
+      print('[DEBUG] GET bus info response: ${response.statusCode}');
+      print('[DEBUG] GET response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        print('[DEBUG] Bus exists in database');
+        final busData = jsonDecode(response.body);
+        print('[DEBUG] Current bus data: $busData');
+      } else {
+        print('[DEBUG] Bus not found or endpoint issue: ${response.statusCode}');
+      }
     } catch (e) {
-      print('[SignalR] Connection Error: $e');
+      print('[DEBUG] Error testing endpoint: $e');
     }
   }
 
-  void _onBusLocationUpdated(List<Object?>? args) {
-    print('[SignalR] BusLocationUpdated event: $args');
-    if (args == null || args.length < 3) return;
-    final busId = args[0]?.toString() ?? '';
-    final latitude = double.tryParse(args[1]?.toString() ?? '');
-    final longitude = double.tryParse(args[2]?.toString() ?? '');
-    print('[SignalR] Received busId: $busId, _targetBusNumberPlate: $_targetBusNumberPlate');
-    if (busId.isEmpty || latitude == null || longitude == null) {
-      print('[SignalR] Invalid bus update payload, ignoring.');
+  // Fixed location update method with proper error handling
+  Future<void> _sendLocationUpdate(double latitude, double longitude) async {
+    print('[DEBUG] _sendLocationUpdate called with lat=$latitude, lng=$longitude, bus=$_targetBusNumberPlate');
+
+    if (_targetBusNumberPlate == null || _targetBusNumberPlate!.isEmpty) {
+      print('[DEBUG] Bus number plate is null or empty, cannot send location update.');
       return;
     }
-    if (_targetBusNumberPlate != null && busId != _targetBusNumberPlate) {
-      print('[SignalR] Ignoring update for busId $busId (not target $_targetBusNumberPlate)');
-      return;
+
+    // Construct the URL properly
+    final baseUrl = 'https://bus-finder-sl-a7c6a549fbb1.herokuapp.com';
+    final encodedNumberPlate = Uri.encodeComponent(_targetBusNumberPlate!);
+    final url = Uri.parse('$baseUrl/api/Bus/$encodedNumberPlate/location');
+
+    // Match the exact field names from the API documentation
+    final payload = {
+      'currentLocationLatitude': latitude,
+      'currentLocationLongitude': longitude,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    print('[DEBUG] Sending location update to $url');
+    print('[DEBUG] Payload: ${jsonEncode(payload)}');
+
+    try {
+      final response = await http.put( // Changed from POST to PUT
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          // Add any authentication headers if required
+          // 'Authorization': 'Bearer your-token-here',
+        },
+        body: jsonEncode(payload),
+      ).timeout(const Duration(seconds: 30));
+
+      print('[DEBUG] Location update HTTP response: status=${response.statusCode}');
+      print('[DEBUG] Response headers: ${response.headers}');
+      print('[DEBUG] Response body: ${response.body}');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        print('[DEBUG] Location update successful.');
+
+        // Show success message occasionally (not every time to avoid spam)
+        if (DateTime.now().millisecondsSinceEpoch % 10 == 0 && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location updated successfully'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
+      } else {
+        print('[DEBUG] Location update failed with status: ${response.statusCode}');
+        print('[DEBUG] Error response body: ${response.body}');
+
+        // Parse error response if it's JSON
+        try {
+          final errorData = jsonDecode(response.body);
+          print('[DEBUG] Parsed error: $errorData');
+        } catch (e) {
+          print('[DEBUG] Could not parse error response as JSON');
+        }
+
+        // Show error in UI for debugging
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Location update failed: ${response.statusCode} - ${response.reasonPhrase}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } on TimeoutException catch (e) {
+      print('[DEBUG] Timeout exception: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Location update timeout'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } on SocketException catch (e) {
+      print('[DEBUG] Socket exception (network error): $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Network error - check internet connection'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('[DEBUG] Exception while sending location update: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Location update error: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
-    print('[SignalR] ACCEPTED update for busId $busId');
-    print('[SignalR] Updating bus marker: id=$busId, lat=$latitude, lng=$longitude');
-    _updateBusMarker(busId, latitude, longitude);
+  }
+
+  // Enhanced GPS subscription with better error handling
+  Future<void> _subscribeToGpsUpdates() async {
+    print('[DEBUG] _subscribeToGpsUpdates called');
+
+    // Cancel existing subscription
+    _gpsSubscription?.cancel();
+    _locationUpdateTimer?.cancel();
+
+    try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        print('[DEBUG] Location services are disabled.');
+        setState(() {
+          _errorMessage = 'Location services are disabled. Please enable them.';
+        });
+        return;
+      }
+
+      // Check and request permissions
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        print('[DEBUG] Location permission denied, requesting permission...');
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          print('[DEBUG] Location permissions are denied.');
+          setState(() {
+            _errorMessage = 'Location permissions are denied.';
+          });
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        print('[DEBUG] Location permissions are permanently denied.');
+        setState(() {
+          _errorMessage = 'Location permissions are permanently denied.';
+        });
+        return;
+      }
+
+      print('[DEBUG] Permissions OK, starting location updates...');
+
+      // Test the endpoint first
+      await _testEndpoint();
+
+      // Get initial position
+      try {
+        final initialPosition = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        ).timeout(const Duration(seconds: 10));
+
+        print('[DEBUG] Initial position: lat=${initialPosition.latitude}, lng=${initialPosition.longitude}');
+        await _sendLocationUpdate(initialPosition.latitude, initialPosition.longitude);
+      } catch (e) {
+        print('[DEBUG] Error getting initial position: $e');
+      }
+
+      // Start periodic location updates - reduced frequency to avoid overwhelming the server
+      _locationUpdateTimer = Timer.periodic(const Duration(seconds: 15), (_) async {
+        try {
+          final position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+          ).timeout(const Duration(seconds: 10));
+
+          print('[DEBUG] Periodic update: lat=${position.latitude}, lng=${position.longitude}');
+          await _sendLocationUpdate(position.latitude, position.longitude);
+        } catch (e) {
+          print('[DEBUG] Error in periodic location update: $e');
+        }
+      });
+
+      // Also subscribe to position stream for movement-based updates
+      _gpsSubscription = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 20, // Update every 20 meters (increased from 10)
+          timeLimit: Duration(seconds: 30), // Reduced timeout
+        ),
+      ).listen(
+            (Position position) {
+          print('[DEBUG] GPS stream update: lat=${position.latitude}, lng=${position.longitude}');
+          _sendLocationUpdate(position.latitude, position.longitude);
+        },
+        onError: (error) {
+          print('[DEBUG] Error in GPS position stream: $error');
+        },
+        onDone: () {
+          print('[DEBUG] GPS position stream closed.');
+        },
+      );
+
+      print('[DEBUG] Location updates started successfully.');
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Location tracking started'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+    } catch (e) {
+      print('[DEBUG] Error in _subscribeToGpsUpdates: $e');
+      setState(() {
+        _errorMessage = 'Failed to start location updates: $e';
+      });
+    }
   }
 
   void _updateBusMarker(String busId, double latitude, double longitude) {
@@ -132,7 +373,6 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       ),
     );
     setState(() {
-      _busMarkers[busId] = marker;
       _markers.removeWhere((m) => m.markerId == markerId);
       _markers.add(marker);
     });
@@ -156,7 +396,6 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
           : mapDataRaw;
 
       print('[DEBUG] mapData: $mapData');
-      // No longer set _targetBusNumberPlate here
 
       _mapConfig = MapConfiguration.fromJson(mapData);
 
@@ -373,7 +612,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       );
 
       final polyline = gmaps.Polyline(
-        polylineId: gmaps.PolylineId('road_route_ [${_polylines.length}'),
+        polylineId: gmaps.PolylineId('road_route_${_polylines.length}'),
         points: routePoints,
         color: _parseColor(layer?.renderOptions.strokeColor ?? '#FF0000'),
         width: layer?.renderOptions.strokeWidth ?? 3,
@@ -388,6 +627,50 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       // Fallback: draw straight line
       _addPolyline(coordinates, layer);
     }
+  }
+
+  // Test method - add this button temporarily to test location updates
+  Widget _buildTestButton() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () async {
+                await _testEndpoint();
+                if (_targetBusNumberPlate != null) {
+                  await _sendLocationUpdate(6.9271, 79.8612); // Test coordinates
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Test Location Update'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () async {
+                try {
+                  final position = await Geolocator.getCurrentPosition();
+                  await _sendLocationUpdate(position.latitude, position.longitude);
+                } catch (e) {
+                  print('Error getting current position: $e');
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Send Current Location'),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -419,6 +702,24 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
                   ),
                 ),
                 const Spacer(),
+                // Show bus number plate if available
+                if (_targetBusNumberPlate != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      _targetBusNumberPlate!,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                const SizedBox(width: 8),
                 if (!_isLoading)
                   IconButton(
                     onPressed: _loadMapData,
@@ -428,6 +729,10 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
               ],
             ),
           ),
+
+          // 🔸 Test Buttons (remove in production)
+          if (!_isLoading && _errorMessage == null)
+            _buildTestButton(),
 
           // 🔸 Map Container
           Expanded(
