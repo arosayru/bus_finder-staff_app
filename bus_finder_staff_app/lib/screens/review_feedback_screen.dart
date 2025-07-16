@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 class ReviewFeedbackScreen extends StatefulWidget {
   const ReviewFeedbackScreen({super.key});
@@ -8,34 +10,151 @@ class ReviewFeedbackScreen extends StatefulWidget {
 }
 
 class _ReviewFeedbackScreenState extends State<ReviewFeedbackScreen> {
-  List<Map<String, String>> feedbackList = [
-    {
-      "name": "Robert Andrew",
-      "feedback":
-          "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book."
-    },
-    {
-      "name": "Robert Andrew",
-      "feedback":
-          "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book."
-    },
-    {
-      "name": "Robert Andrew",
-      "feedback":
-          "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book."
-    },
-  ];
+  List<Map<String, String>> feedbackList = [];
+  bool isLoading = true;
+  String? errorMessage;
 
-  void _clearAll() {
+  Future<void> fetchFeedbacks() async {
     setState(() {
-      feedbackList.clear();
+      isLoading = true;
+      errorMessage = null;
     });
+
+    final url = Uri.parse('https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/api/Feedback');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      );
+
+      // Debug: Print response details
+      print('Response Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+      print('Response Headers: ${response.headers}');
+
+      if (response.statusCode == 200) {
+        final responseBody = response.body.trim();
+
+        if (responseBody.isEmpty) {
+          setState(() {
+            feedbackList = [];
+            isLoading = false;
+          });
+          return;
+        }
+
+        final dynamic decodedData = json.decode(responseBody);
+        print('Decoded Data Type: ${decodedData.runtimeType}');
+        print('Decoded Data: $decodedData');
+
+        // Handle different response structures
+        List<dynamic> data;
+        if (decodedData is List) {
+          data = decodedData;
+        } else if (decodedData is Map) {
+          // If response is wrapped in an object, try to find the array
+          if (decodedData.containsKey('data')) {
+            data = decodedData['data'] as List<dynamic>;
+          } else if (decodedData.containsKey('feedbacks')) {
+            data = decodedData['feedbacks'] as List<dynamic>;
+          } else if (decodedData.containsKey('feedback')) {
+            data = decodedData['feedback'] as List<dynamic>;
+          } else {
+            // If it's a single object, wrap it in a list
+            data = [decodedData];
+          }
+        } else {
+          throw Exception('Unexpected response format');
+        }
+
+        setState(() {
+          feedbackList = data.map<Map<String, String>>((item) {
+            print('Processing item: $item');
+            print('Item type: ${item.runtimeType}');
+
+            if (item is Map<String, dynamic>) {
+              // Print all keys in the item to debug field names
+              print('Available keys: ${item.keys.toList()}');
+
+              // Try different possible field names
+              String name = '';
+              String feedback = '';
+
+              // Common field name variations for name
+              if (item.containsKey('name')) {
+                name = item['name']?.toString() ?? '';
+              } else if (item.containsKey('Name')) {
+                name = item['Name']?.toString() ?? '';
+              } else if (item.containsKey('userName')) {
+                name = item['userName']?.toString() ?? '';
+              } else if (item.containsKey('user_name')) {
+                name = item['user_name']?.toString() ?? '';
+              } else if (item.containsKey('username')) {
+                name = item['username']?.toString() ?? '';
+              } else if (item.containsKey('customerName')) {
+                name = item['customerName']?.toString() ?? '';
+              } else if (item.containsKey('customer_name')) {
+                name = item['customer_name']?.toString() ?? '';
+              }
+
+              // Common field name variations for feedback
+              if (item.containsKey('feedback')) {
+                feedback = item['feedback']?.toString() ?? '';
+              } else if (item.containsKey('Feedback')) {
+                feedback = item['Feedback']?.toString() ?? '';
+              } else if (item.containsKey('message')) {
+                feedback = item['message']?.toString() ?? '';
+              } else if (item.containsKey('Message')) {
+                feedback = item['Message']?.toString() ?? '';
+              } else if (item.containsKey('comment')) {
+                feedback = item['comment']?.toString() ?? '';
+              } else if (item.containsKey('Comment')) {
+                feedback = item['Comment']?.toString() ?? '';
+              } else if (item.containsKey('review')) {
+                feedback = item['review']?.toString() ?? '';
+              } else if (item.containsKey('Review')) {
+                feedback = item['Review']?.toString() ?? '';
+              }
+
+              print('Extracted - Name: "$name", Feedback: "$feedback"');
+
+              return {
+                "name": name.isNotEmpty ? name : "Unknown",
+                "feedback": feedback.isNotEmpty ? feedback : "No feedback provided",
+              };
+            } else {
+              print('Item is not a Map<String, dynamic>');
+              return {
+                "name": "Unknown",
+                "feedback": "Invalid data format",
+              };
+            }
+          }).toList();
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          errorMessage = 'Failed to load feedbacks: ${response.statusCode}\nResponse: ${response.body}';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error fetching feedbacks: $e';
+        isLoading = false;
+      });
+      print('Exception details: $e');
+    }
   }
 
-  void _removeFeedback(int index) {
-    setState(() {
-      feedbackList.removeAt(index);
-    });
+  @override
+  void initState() {
+    super.initState();
+    fetchFeedbacks();
   }
 
   @override
@@ -59,7 +178,7 @@ class _ReviewFeedbackScreenState extends State<ReviewFeedbackScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // 🔸 Header
+              // Header
               Padding(
                 padding: const EdgeInsets.only(left: 10.0, top: 10.0),
                 child: Row(
@@ -94,89 +213,117 @@ class _ReviewFeedbackScreenState extends State<ReviewFeedbackScreen> {
                   color: Colors.black54,
                 ),
               ),
-
               const SizedBox(height: 10),
-
-              // 🔸 Clear Button
-              Align(
-                alignment: Alignment.centerRight,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 20),
-                  child: ElevatedButton(
-                    onPressed: _clearAll,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      elevation: 3,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: const Text(
-                      'Clear',
-                      style: TextStyle(
-                        color: Color(0xFFBD2D01),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 5),
-
-              // 🔸 Feedback List
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  itemCount: feedbackList.length,
-                  itemBuilder: (context, index) {
-                    final feedback = feedbackList[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: const [
-                          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(2, 4)),
-                        ],
-                      ),
-                      child: Stack(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(right: 24),
+                child: Builder(
+                  builder: (context) {
+                    if (isLoading) {
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(color: Colors.white),
+                            SizedBox(height: 16),
+                            Text(
+                              'Loading feedback...',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    if (errorMessage != null) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error, color: Colors.red, size: 48),
+                              const SizedBox(height: 16),
+                              Text(
+                                errorMessage!,
+                                style: const TextStyle(color: Colors.white),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: fetchFeedbacks,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    if (feedbackList.isEmpty) {
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.feedback_outlined, color: Colors.white, size: 48),
+                            SizedBox(height: 16),
+                            Text(
+                              'No feedbacks found.',
+                              style: TextStyle(color: Colors.white, fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return RefreshIndicator(
+                      onRefresh: fetchFeedbacks,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        itemCount: feedbackList.length,
+                        itemBuilder: (context, index) {
+                          final feedback = feedbackList[index];
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: const [
+                                BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(2, 4)),
+                              ],
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  feedback["name"]!,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFFBD2D01),
-                                  ),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.person,
+                                      color: Color(0xFFBD2D01),
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        feedback["name"] ?? "Unknown",
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFBD2D01),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 8),
                                 Text(
-                                  feedback["feedback"]!,
+                                  feedback["feedback"] ?? "",
                                   style: const TextStyle(
                                     fontSize: 14,
                                     color: Colors.black87,
+                                    height: 1.4,
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                          Positioned(
-                            top: 0,
-                            right: 0,
-                            child: GestureDetector(
-                              onTap: () => _removeFeedback(index),
-                              child: const Icon(Icons.close, size: 18, color: Colors.red),
-                            ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     );
                   },
