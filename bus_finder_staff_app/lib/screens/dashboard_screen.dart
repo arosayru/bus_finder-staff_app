@@ -168,67 +168,144 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     child: Column(
                       children: [
-                        // GPS Toggle Container - Now using global GPS service
+                        // Enhanced GPS Toggle Container with detailed feedback
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 25),
-                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF67F00),
                             borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              // Using AnimatedBuilder to listen to GPS service changes
-                              AnimatedBuilder(
-                                animation: _gpsService,
-                                builder: (context, child) {
-                                  return Text(
-                                    _gpsService.isGpsEnabled ? "GPS Enabled" : "GPS Disabled",
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  );
-                                },
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black26,
+                                offset: Offset(0, 2),
+                                blurRadius: 4,
                               ),
-                              GestureDetector(
-                                onTap: () async {
-                                  // Toggle GPS using the global service
-                                  await _gpsService.toggleGps();
-                                },
-                                child: AnimatedBuilder(
-                                  animation: _gpsService,
-                                  builder: (context, child) {
-                                    return Container(
-                                      width: 52,
-                                      height: 30,
-                                      padding: const EdgeInsets.all(2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(20),
+                            ],
+                          ),
+                          child: AnimatedBuilder(
+                            animation: _gpsService,
+                            builder: (context, child) {
+                              return Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              _gpsService.isGpsEnabled ? "GPS Location Sharing" : "GPS Disabled",
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            Text(
+                                              _gpsService.isGpsEnabled
+                                                  ? 'Sharing live location...'
+                                                  : 'Location sharing stopped',
+                                              style: const TextStyle(
+                                                color: Colors.white70,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                      child: AnimatedAlign(
-                                        alignment: _gpsService.isGpsEnabled
-                                            ? Alignment.centerRight
-                                            : Alignment.centerLeft,
-                                        duration: const Duration(milliseconds: 200),
+                                      GestureDetector(
+                                        onTap: () async {
+                                          // Toggle GPS using the global service
+                                          await _gpsService.toggleGps();
+
+                                          // Show feedback to user
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  _gpsService.isGpsEnabled
+                                                      ? 'GPS enabled. Sharing live location...'
+                                                      : 'GPS disabled. Location sharing stopped.',
+                                                ),
+                                                backgroundColor: _gpsService.isGpsEnabled ? Colors.green : Colors.red,
+                                                duration: const Duration(seconds: 2),
+                                              ),
+                                            );
+                                          }
+                                        },
                                         child: Container(
-                                          width: 24,
-                                          height: 24,
+                                          width: 52,
+                                          height: 30,
+                                          padding: const EdgeInsets.all(2),
                                           decoration: BoxDecoration(
-                                            color: _gpsService.isGpsEnabled
-                                                ? const Color(0xFF23C51E)
-                                                : const Color(0xFFC51E1E),
-                                            shape: BoxShape.circle,
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: AnimatedAlign(
+                                            alignment: _gpsService.isGpsEnabled
+                                                ? Alignment.centerRight
+                                                : Alignment.centerLeft,
+                                            duration: const Duration(milliseconds: 200),
+                                            child: Container(
+                                              width: 24,
+                                              height: 24,
+                                              decoration: BoxDecoration(
+                                                color: _gpsService.isGpsEnabled
+                                                    ? const Color(0xFF23C51E)
+                                                    : const Color(0xFFC51E1E),
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
+                                    ],
+                                  ),
+                                  // Additional GPS information
+                                  if (_gpsService.targetBusNumberPlate != null ||
+                                      _gpsService.currentLocation != null ||
+                                      _gpsService.errorMessage != null)
+                                    const SizedBox(height: 8),
+                                  if (_gpsService.targetBusNumberPlate != null)
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        'Bus: ${_gpsService.targetBusNumberPlate}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  if (_gpsService.currentLocation != null)
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        'Last update: ${_gpsService.currentLocation!.latitude.toStringAsFixed(4)}, ${_gpsService.currentLocation!.longitude.toStringAsFixed(4)}',
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                  if (_gpsService.errorMessage != null)
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        _gpsService.errorMessage!,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            },
                           ),
                         ),
                         const SizedBox(height: 25),
@@ -391,5 +468,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    // Don't dispose the GPS service here as it's a singleton
+    super.dispose();
   }
 }

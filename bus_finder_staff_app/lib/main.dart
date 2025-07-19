@@ -16,6 +16,7 @@ import 'screens/profile_screen.dart';
 import 'screens/review_feedback_screen.dart';
 import 'screens/help_and_support_screen.dart';
 import 'screens/about_us_screen.dart';
+import 'service/gps_service.dart';
 
 void main() {
   runApp(const BusFinderApp());
@@ -31,6 +32,7 @@ class BusFinderApp extends StatelessWidget {
       title: 'Bus Finder',
       theme: ThemeData(
         fontFamily: 'Roboto',
+        primarySwatch: Colors.orange,
       ),
       home: const SplashScreen(),
       routes: {
@@ -63,12 +65,48 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  bool _isInitialized = false;
+  bool _hasError = false;
+  String _errorMessage = '';
+
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 10), () {
-      Navigator.pushReplacementNamed(context, '/login');
-    });
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    try {
+      // Initialize GPS service when app starts
+      final gpsService = GpsService();
+      await gpsService.initialize();
+
+      setState(() {
+        _isInitialized = true;
+      });
+
+      // Wait for splash screen duration (10 seconds as per original)
+      await Future.delayed(const Duration(seconds: 10));
+
+      // Navigate to login screen
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+
+    } catch (e) {
+      print('Error initializing app: $e');
+      setState(() {
+        _isInitialized = true;
+        _hasError = true;
+        _errorMessage = 'Failed to initialize GPS service';
+      });
+
+      // Still navigate to login after delay even if GPS fails
+      await Future.delayed(const Duration(seconds: 10));
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    }
   }
 
   @override
@@ -95,11 +133,89 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // App Logo
               Image.asset(
                 'assets/images/logo_staff.png',
                 height: 180,
               ),
               const SizedBox(height: 30),
+
+              // Loading indicator and status
+              if (!_isInitialized) ...[
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Initializing app...',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ] else if (_hasError) ...[
+                const Icon(
+                  Icons.warning,
+                  color: Colors.white,
+                  size: 32,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _errorMessage,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Continuing to login...',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ] else ...[
+                const Icon(
+                  Icons.check_circle,
+                  color: Colors.white,
+                  size: 32,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'App initialized successfully!',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+
+              // Progress indicator for splash screen duration
+              const SizedBox(height: 40),
+              Container(
+                width: 200,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: const LinearProgressIndicator(
+                  backgroundColor: Colors.transparent,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Loading...',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
+              ),
             ],
           ),
         ),
