@@ -5,6 +5,7 @@ import 'user_service.dart';
 class MapService {
   static const String baseUrl = 'https://bus-finder-sl-a7c6a549fbb1.herokuapp.com';
   static const String liveBusShiftEndpoint = '/api/Map/staff-view-live-bus-shift';
+  static const String futureBusShiftEndpoint = '/api/BusShift/by-route';
 
   // Get staff ID by email
   static Future<String?> getStaffIdByEmail(String email) async {
@@ -85,6 +86,427 @@ class MapService {
     } catch (e) {
       print('Error getting bus details by staff ID: $e');
       return null;
+    }
+  }
+
+  // Helper method to extract bus number plate from shift data
+  static String? _extractBusNumberPlate(Map<String, dynamic> shiftMap) {
+    // Primary field name options for bus number plate
+    List<String> primaryFields = [
+      'numberPlate',      // This matches your JSON structure
+      'NumberPlate',
+      'busNumberPlate',
+      'BusNumberPlate',
+      'busPlate',
+      'BusPlate',
+      'bus',
+      'Bus',
+      'busNumber',
+      'BusNumber',
+      'vehicleNumber',
+      'VehicleNumber',
+      'plateNumber',
+      'PlateNumber',
+    ];
+
+    // Check primary level fields first
+    for (String field in primaryFields) {
+      if (shiftMap.containsKey(field) && shiftMap[field] != null) {
+        final value = shiftMap[field].toString().trim();
+        if (value.isNotEmpty && value != 'null') {
+          print('DEBUG: Found bus plate in field "$field": "$value"');
+          return value;
+        }
+      }
+    }
+
+    // Check nested bus object
+    final nestedBusFields = ['bus', 'Bus', 'busDetails', 'BusDetails'];
+    for (String busField in nestedBusFields) {
+      if (shiftMap[busField] is Map<String, dynamic>) {
+        final busObj = shiftMap[busField] as Map<String, dynamic>;
+        print('DEBUG: Checking nested bus object in "$busField": ${busObj.keys.toList()}');
+
+        for (String field in primaryFields) {
+          if (busObj.containsKey(field) && busObj[field] != null) {
+            final value = busObj[field].toString().trim();
+            if (value.isNotEmpty && value != 'null') {
+              print('DEBUG: Found bus plate in nested field "$busField.$field": "$value"');
+              return value;
+            }
+          }
+        }
+      }
+    }
+
+    print('DEBUG: No bus number plate found in shift data. Available fields: ${shiftMap.keys.toList()}');
+    return null;
+  }
+
+  // Add this method to handle the specific JSON structure you showed
+  static List<Map<String, dynamic>> transformShiftResponse(List<dynamic> rawShifts) {
+    return rawShifts.map<Map<String, dynamic>>((shift) {
+      final shiftMap = shift as Map<String, dynamic>;
+
+      // Transform the nested structure to a flatter structure for easier access
+      final transformedShift = <String, dynamic>{
+        // Copy all original fields
+        ...shiftMap,
+
+        // Add flattened normal direction fields
+        if (shiftMap['normal'] != null && shiftMap['normal'] is Map<String, dynamic>) ...{
+          'normalStartTime': shiftMap['normal']['startTime'],
+          'normalEndTime': shiftMap['normal']['endTime'],
+          'normalDate': shiftMap['normal']['date'],
+        },
+
+        // Add flattened reverse direction fields
+        if (shiftMap['reverse'] != null && shiftMap['reverse'] is Map<String, dynamic>) ...{
+          'reverseStartTime': shiftMap['reverse']['startTime'],
+          'reverseEndTime': shiftMap['reverse']['endTime'],
+          'reverseDate': shiftMap['reverse']['date'],
+        },
+
+        // Add route number for consistency
+        'routeNumber': shiftMap['routeNo'] ?? shiftMap['RouteNo'] ?? 'N/A',
+      };
+
+      return transformedShift;
+    }).toList();
+  }
+// Helper method to format date to YYYY-MM-DD
+  static String _formatDateForAPI(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+// Helper method to format time to HH:MM:SS
+  static String _formatTimeForAPI(DateTime dateTime) {
+    return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}';
+  }
+
+  // Get future bus shifts for the logged-in staff member's assigned bus ONLY (with client-side filtering)
+  static Future<List<Map<String, dynamic>>> getFutureBusShifts({
+    String? date,
+    String? time,
+  }) async {
+    try {
+      print('DEBUG: Starting getFutureBusShifts with client-side filtering');
+
+
+      // Get staff email from UserService
+      final email = await UserService.getStaffEmail();
+      print('DEBUG: Retrieved staff email: $email');
+
+      if (email == null || email.isEmpty || email == 'N/A') {
+        throw Exception('Staff email not found. Please ensure you are logged in.');
+      }
+
+      // Get staff ID by email
+      final staffId = await getStaffIdByEmail(email);
+      print('DEBUG: Retrieved staff ID: $staffId');
+
+      if (staffId == null || staffId.isEmpty) {
+        throw Exception('Failed to get staff ID for email: $email');
+      }
+
+      // Get bus details by staff ID
+      final busDetails = await getBusDetailsByStaffId(staffId);
+      print('DEBUG: Retrieved bus details: $busDetails');
+
+      if (busDetails == null) {
+        throw Exception('No bus assigned to staff ID: $staffId');
+      }
+
+      final busRouteNumber = busDetails['busRouteNumber']!;
+      final userBusNumberPlate = busDetails['numberPlate']!;
+      print('DEBUG: Using bus route number: $busRouteNumber');
+      print('DEBUG: Filtering for user\'s bus number plate: $userBusNumberPlate');
+
+
+      // Build the endpoint URL
+      final baseEndpoint = '$baseUrl$futureBusShiftEndpoint/$busRouteNumber/future';
+
+      // Build query parameters
+      Map<String, String> queryParams = {};
+
+      if (date != null && date.isNotEmpty) {
+        // If date is already in correct format, use as is, otherwise format it
+        if (date.contains('-') && date.length == 10) {
+          queryParams['date'] = date;
+        } else {
+          // Handle conversion from other formats if needed
+          try {
+            // Try parsing DD/MM/YYYY format
+            final parts = date.split('/');
+            if (parts.length == 3) {
+              final day = int.parse(parts[0]);
+              final month = int.parse(parts[1]);
+              final year = int.parse(parts[2]);
+              final parsedDate = DateTime(year, month, day);
+              queryParams['date'] = _formatDateForAPI(parsedDate);
+            } else {
+              queryParams['date'] = date; // Use as is if can't parse
+            }
+          } catch (e) {
+            print('DEBUG: Could not parse date format, using as is: $date');
+            queryParams['date'] = date;
+          }
+        }
+        print('DEBUG: Adding date parameter: ${queryParams['date']}');
+      }if (time != null && time.isNotEmpty) {
+        // If time is already in correct format, use as is, otherwise format it
+        if (time.contains(':')) {
+          // Already in HH:MM or HH:MM:SS format
+          if (time.split(':').length == 2) {
+            queryParams['time'] = '$time:00'; // Add seconds if missing
+          } else {
+            queryParams['time'] = time;
+          }
+        } else if (time.contains('.')) {
+          // Convert HH.MM to HH:MM:SS
+          final parts = time.split('.');
+          if (parts.length == 2) {
+            queryParams['time'] = '${parts[0]}:${parts[1]}:00';
+          } else {
+            queryParams['time'] = time;
+          }
+        } else {
+          queryParams['time'] = time; // Use as is
+        }
+        print('DEBUG: Adding time parameter: ${queryParams['time']}');
+      }
+
+      // Create URI with query parameters
+      final uri = Uri.parse(baseEndpoint).replace(queryParameters: queryParams.isEmpty ? null : queryParams);
+
+      print('DEBUG: Making request to: $uri');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('DEBUG: Future bus shifts response status: ${response.statusCode}');
+      print('DEBUG: Future bus shifts response body: ${response.body}');
+
+      if (response.statusCode == 200 && response.body.isNotEmpty) {
+        final decoded = json.decode(response.body);
+        print('DEBUG: Decoded response type: ${decoded.runtimeType}');
+
+        // Handle both array and single object responses
+        List<dynamic> shiftsList;
+        if (decoded is List) {
+          shiftsList = decoded;
+        } else if (decoded is Map<String, dynamic>) {
+          // If it's a single object, wrap it in a list
+          shiftsList = [decoded];
+        } else {
+          throw Exception('API returned unexpected data format');
+        }
+
+        print('DEBUG: Found ${shiftsList.length} total shifts for route $busRouteNumber');
+
+        // Transform the response to handle your JSON structure
+        List<Map<String, dynamic>> transformedShifts = transformShiftResponse(shiftsList);
+
+        // CLIENT-SIDE FILTERING BY USER'S SPECIFIC BUS NUMBER PLATE
+        List<Map<String, dynamic>> filteredShifts = [];
+
+        for (int index = 0; index < transformedShifts.length; index++) {
+          final shift = transformedShifts[index];
+
+          print('DEBUG: Processing shift ${index + 1}: ${shift.keys.toList()}');
+
+          // Check various possible field names for bus identification
+          String? shiftBusPlate = _extractBusNumberPlate(shift);
+
+          print('DEBUG: Shift ${index + 1} bus plate: "$shiftBusPlate", User bus plate: "$userBusNumberPlate"');
+
+          // Filter by user's bus number plate (case-insensitive comparison)
+          if (shiftBusPlate != null &&
+              shiftBusPlate.toLowerCase().trim() == userBusNumberPlate.toLowerCase().trim()) {
+            filteredShifts.add(shift);
+            print('DEBUG: ✅ Shift ${index + 1} matched user\'s bus - INCLUDED');
+          } else {
+            print('DEBUG: ❌ Shift ${index + 1} does not match user\'s bus - EXCLUDED');
+          }
+        }
+
+        print('DEBUG: FILTERING COMPLETE - Found ${filteredShifts.length} shifts for user\'s bus out of ${transformedShifts.length} total shifts');
+
+        // Log each filtered shift for debugging
+        for (int i = 0; i < filteredShifts.length; i++) {
+          print('DEBUG: User\'s Shift ${i + 1} details: ${filteredShifts[i]}');
+        }
+
+        return filteredShifts;
+      } else {
+        print('DEBUG: Failed to load future bus shifts - status: ${response.statusCode}');
+        throw Exception('Failed to load future bus shifts: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('DEBUG: Exception in getFutureBusShifts: $e');
+      throw Exception('Error fetching future bus shifts: $e');
+    }
+  }
+
+
+  // Alternative method that accepts custom route number (for flexibility) - also with filtering
+  static Future<List<Map<String, dynamic>>> getFutureBusShiftsByRoute(
+      String routeNumber, {
+        String? date,
+        String? time,
+        bool filterByUserBus = false,
+      }) async {
+    try {
+      print('DEBUG: Starting getFutureBusShiftsByRoute with route: $routeNumber, filterByUserBus: $filterByUserBus');
+
+      String? userBusNumberPlate;
+
+      // If filtering is enabled, get user's bus details
+      if (filterByUserBus) {
+        final email = await UserService.getStaffEmail();
+        if (email == null || email.isEmpty || email == 'N/A') {
+          throw Exception('Staff email not found for filtering. Please ensure you are logged in.');
+        }
+
+        final staffId = await getStaffIdByEmail(email);
+        if (staffId == null || staffId.isEmpty) {
+          throw Exception('Failed to get staff ID for filtering.');
+        }
+
+        final busDetails = await getBusDetailsByStaffId(staffId);
+        if (busDetails == null) {
+          throw Exception('No bus assigned to staff for filtering.');
+        }
+
+        userBusNumberPlate = busDetails['numberPlate']!;
+        print('DEBUG: Will filter by user\'s bus: $userBusNumberPlate');
+      }
+
+      // Build the endpoint URL
+      final baseEndpoint = '$baseUrl$futureBusShiftEndpoint/$routeNumber/future';
+
+      // Build query parameters with correct formatting
+      Map<String, String> queryParams = {};
+
+      if (date != null && date.isNotEmpty) {
+        // If date is already in correct format, use as is, otherwise format it
+        if (date.contains('-') && date.length == 10) {
+          queryParams['date'] = date;
+        } else {
+          // Handle conversion from other formats if needed
+          try {
+            // Try parsing DD/MM/YYYY format
+            final parts = date.split('/');
+            if (parts.length == 3) {
+              final day = int.parse(parts[0]);
+              final month = int.parse(parts[1]);
+              final year = int.parse(parts[2]);
+              final parsedDate = DateTime(year, month, day);
+              queryParams['date'] = _formatDateForAPI(parsedDate);
+            } else {
+              queryParams['date'] = date; // Use as is if can't parse
+            }
+          } catch (e) {
+            print('DEBUG: Could not parse date format, using as is: $date');
+            queryParams['date'] = date;
+          }
+        }
+        print('DEBUG: Adding date parameter: ${queryParams['date']}');
+      }
+
+      if (time != null && time.isNotEmpty) {
+        // If time is already in correct format, use as is, otherwise format it
+        if (time.contains(':')) {
+          // Already in HH:MM or HH:MM:SS format
+          if (time.split(':').length == 2) {
+            queryParams['time'] = '$time:00'; // Add seconds if missing
+          } else {
+            queryParams['time'] = time;
+          }
+        } else if (time.contains('.')) {
+          // Convert HH.MM to HH:MM:SS
+          final parts = time.split('.');
+          if (parts.length == 2) {
+            queryParams['time'] = '${parts[0]}:${parts[1]}:00';
+          } else {
+            queryParams['time'] = time;
+          }
+        } else {
+          queryParams['time'] = time; // Use as is
+        }
+        print('DEBUG: Adding time parameter: ${queryParams['time']}');
+      }
+
+      // Create URI with query parameters
+      final uri = Uri.parse(baseEndpoint).replace(queryParameters: queryParams.isEmpty ? null : queryParams);
+
+      print('DEBUG: Making request to: $uri');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('DEBUG: Future bus shifts response status: ${response.statusCode}');
+      print('DEBUG: Future bus shifts response body: ${response.body}');
+
+      if (response.statusCode == 200 && response.body.isNotEmpty) {
+        final decoded = json.decode(response.body);
+        print('DEBUG: Decoded response type: ${decoded.runtimeType}');
+
+        // Handle both array and single object responses
+        List<dynamic> shiftsList;
+        if (decoded is List) {
+          shiftsList = decoded;
+        } else if (decoded is Map<String, dynamic>) {
+          // If it's a single object, wrap it in a list
+          shiftsList = [decoded];
+        } else {
+          throw Exception('API returned unexpected data format');
+        }
+
+        print('DEBUG: Found ${shiftsList.length} future shifts for route $routeNumber');
+
+        // Transform the response to handle your JSON structure
+        List<Map<String, dynamic>> transformedShifts = transformShiftResponse(shiftsList);
+
+        // Apply filtering if enabled
+        if (filterByUserBus && userBusNumberPlate != null) {
+          List<Map<String, dynamic>> filteredResult = [];
+
+          for (int index = 0; index < transformedShifts.length; index++) {
+            final shiftMap = transformedShifts[index];
+            String? shiftBusPlate = _extractBusNumberPlate(shiftMap);
+
+            if (shiftBusPlate != null &&
+                shiftBusPlate.toLowerCase().trim() == userBusNumberPlate.toLowerCase().trim()) {
+              filteredResult.add(shiftMap);
+            }
+          }
+
+          print('DEBUG: Filtered ${transformedShifts.length} shifts down to ${filteredResult.length} for user\'s bus');
+          transformedShifts = filteredResult;
+        }
+
+        // Log each shift for debugging
+        for (int i = 0; i < transformedShifts.length; i++) {
+          print('DEBUG: Final Shift ${i + 1}: ${transformedShifts[i]}');
+        }
+
+        return transformedShifts;
+      } else {
+        print('DEBUG: Failed to load future bus shifts - status: ${response.statusCode}');
+        throw Exception('Failed to load future bus shifts: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('DEBUG: Exception in getFutureBusShiftsByRoute: $e');
+      throw Exception('Error fetching future bus shifts: $e');
     }
   }
 
@@ -264,6 +686,7 @@ class MapService {
     }
   }
 }
+
 
 // Data models for map configuration
 class MapConfiguration {

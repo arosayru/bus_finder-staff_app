@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:geolocator/geolocator.dart';
-import '../user_service.dart';
 import '/map_service.dart';
 import '/service/gps_service.dart'; // Import the global GPS service
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:async';
-import 'dart:io';
+
 
 class LiveMapScreen extends StatefulWidget {
   final dynamic busRoute;
