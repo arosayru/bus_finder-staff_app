@@ -13,9 +13,10 @@ class ShiftTrackerScreen extends StatefulWidget {
 
 class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
   List<Map<String, dynamic>> futureShifts = [];
-  Map<String, String> routeNames = {}; // Cache for route names
+  Map<String, String> routeNames = {};
   bool isLoading = true;
   String? errorMessage;
+
   static const String baseUrl = 'https://bus-finder-sl-a7c6a549fbb1.herokuapp.com';
 
   @override
@@ -32,44 +33,25 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
       });
 
       final now = DateTime.now();
-
       final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-
-      // Format time as HH:MM:SS
       final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
-      print('DEBUG: Using date format: $dateStr');
-      print('DEBUG: Using time format: $timeStr');
 
-      // Use the existing MapService method
-      final shifts = await MapService.getFutureBusShifts(
-        date: dateStr,
-        time: timeStr,
-      );
-
-      // Load route names for all shifts
+      final shifts = await MapService.getFutureBusShifts(date: dateStr, time: timeStr);
       await _loadRouteNamesForShifts(shifts);
 
       setState(() {
         futureShifts = shifts;
         isLoading = false;
       });
-
-      print('DEBUG: Loaded ${shifts.length} future shifts');
-      for (int i = 0; i < shifts.length; i++) {
-        print('DEBUG: Shift ${i + 1}: ${shifts[i]}');
-      }
-
     } catch (e) {
       setState(() {
         errorMessage = e.toString();
         isLoading = false;
       });
-      print('Error loading future shifts: $e');
     }
   }
 
   Future<void> _loadRouteNamesForShifts(List<Map<String, dynamic>> shifts) async {
-    // Extract unique route numbers
     Set<String> routeNumbers = {};
     for (var shift in shifts) {
       final routeNo = _getRouteNumber(shift);
@@ -78,69 +60,37 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
       }
     }
 
-    print('DEBUG: Found ${routeNumbers.length} unique route numbers: $routeNumbers');
-
-    // Fetch route names for each unique route number
     for (String routeNumber in routeNumbers) {
       if (!routeNames.containsKey(routeNumber)) {
         try {
           final routeName = await _getRouteNameByNumber(routeNumber);
           if (routeName != null) {
             routeNames[routeNumber] = routeName;
-            print('DEBUG: Cached route name for $routeNumber: $routeName');
           }
-        } catch (e) {
-          print('DEBUG: Failed to get route name for $routeNumber: $e');
-          // Continue with other routes even if one fails
-        }
+        } catch (_) {}
       }
     }
-
-    print('DEBUG: Total cached route names: ${routeNames.length}');
   }
 
   Future<String?> _getRouteNameByNumber(String routeNumber) async {
     try {
       final url = Uri.parse('$baseUrl/api/BusRoute/$routeNumber');
-      print('DEBUG: Fetching route name from: $url');
-
-      final response = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      );
-
-      print('DEBUG: Route name response status: ${response.statusCode}');
-      print('DEBUG: Route name response body: ${response.body}');
+      final response = await http.get(url, headers: {'Content-Type': 'application/json'});
 
       if (response.statusCode == 200 && response.body.isNotEmpty) {
         final decoded = json.decode(response.body);
-        print('DEBUG: Decoded route response: $decoded');
-
-        // Handle different possible response structures
-        String? routeName;
         if (decoded is Map<String, dynamic>) {
-          // Try different possible field names for route name
-          routeName = decoded['routeName']?.toString() ??
+          return decoded['routeName']?.toString() ??
               decoded['RouteName']?.toString() ??
               decoded['route_name']?.toString() ??
               decoded['name']?.toString() ??
               decoded['Name']?.toString();
         } else if (decoded is String) {
-          routeName = decoded;
-        }
-
-        if (routeName != null && routeName.trim().isNotEmpty && routeName != 'null') {
-          print('DEBUG: Successfully extracted route name: $routeName');
-          return routeName.trim();
+          return decoded;
         }
       }
-
-      print('DEBUG: No valid route name found for route number: $routeNumber');
       return null;
-    } catch (e) {
-      print('DEBUG: Exception getting route name for $routeNumber: $e');
+    } catch (_) {
       return null;
     }
   }
@@ -152,25 +102,13 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
         shift['BusRoute']?.toString() ??
         shift['routeName']?.toString() ??
         shift['RouteName']?.toString();
-
-    if (routeNo != null && routeNo.trim().isNotEmpty && routeNo != 'null') {
-      return routeNo.trim();
-    }
-    return null;
+    return (routeNo != null && routeNo != 'null') ? routeNo.trim() : null;
   }
 
   String _getDisplayRouteName(String? routeNumber) {
-    if (routeNumber == null || routeNumber == 'N/A') {
-      return 'N/A';
-    }
-
-    final cachedName = routeNames[routeNumber];
-    if (cachedName != null && cachedName.isNotEmpty) {
-      return '$routeNumber - $cachedName';
-    }
-
-    // Return just the route number if name is not available
-    return routeNumber;
+    if (routeNumber == null || routeNumber == 'N/A') return 'N/A';
+    final cached = routeNames[routeNumber];
+    return (cached != null && cached.isNotEmpty) ? '$routeNumber - $cached' : routeNumber;
   }
 
   @override
@@ -190,14 +128,7 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
                   child: const Icon(Icons.arrow_back, color: Colors.white),
                 ),
                 const SizedBox(width: 12),
-                const Text(
-                  "Shift Tracker",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                const Text("Shift Tracker", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                 const Spacer(),
                 GestureDetector(
                   onTap: _loadFutureShifts,
@@ -235,10 +166,7 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadFutureShifts,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFB9933),
-                foregroundColor: Colors.white,
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFB9933)),
               child: const Text('Retry'),
             ),
           ],
@@ -247,10 +175,10 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
     }
 
     if (futureShifts.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
+          children: [
             Icon(Icons.schedule, size: 64, color: Colors.grey),
             SizedBox(height: 16),
             Text('No future shifts available', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -272,9 +200,7 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: const [
-              BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(2, 4)),
-            ],
+            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(2, 4))],
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,12 +213,44 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
               IconButton(
                 icon: const Icon(Icons.arrow_forward_ios, size: 20),
                 onPressed: () {
+                  final routeNo = _getRouteNumber(shift);
+                  final displayRouteName = _getDisplayRouteName(routeNo);
+
+                  final numberPlate = shift['numberPlate']?.toString() ??
+                      shift['NumberPlate']?.toString() ??
+                      shift['busNumberPlate']?.toString() ??
+                      shift['BusNumberPlate']?.toString() ?? 'N/A';
+
+                  final normalStartTime = shift['normal']?['startTime']?.toString() ??
+                      shift['normal']?['StartTime']?.toString() ?? 'N/A';
+                  final normalEndTime = shift['normal']?['endTime']?.toString() ??
+                      shift['normal']?['EndTime']?.toString() ?? 'N/A';
+                  final normalDate = shift['normal']?['date']?.toString() ??
+                      shift['normal']?['Date']?.toString() ?? 'N/A';
+
+                  final reverseStartTime = shift['reverse']?['startTime']?.toString() ??
+                      shift['reverse']?['StartTime']?.toString() ?? 'N/A';
+                  final reverseEndTime = shift['reverse']?['endTime']?.toString() ??
+                      shift['reverse']?['EndTime']?.toString() ?? 'N/A';
+                  final reverseDate = shift['reverse']?['date']?.toString() ??
+                      shift['reverse']?['Date']?.toString() ?? 'N/A';
+
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const ShiftTripScreen(),
-                      // You can pass shift data if needed
-                      // settings: RouteSettings(arguments: shift),
+                      builder: (_) => ShiftTripScreen(
+                        shiftData: {
+                          'routeNumber': routeNo ?? 'N/A',
+                          'displayRouteName': displayRouteName,
+                          'numberPlate': numberPlate,
+                          'normalStartTime': normalStartTime,
+                          'normalEndTime': normalEndTime,
+                          'normalDate': normalDate,
+                          'reverseStartTime': reverseStartTime,
+                          'reverseEndTime': reverseEndTime,
+                          'reverseDate': reverseDate,
+                        },
+                      ),
                     ),
                   );
                 },
@@ -305,106 +263,43 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
   }
 
   Widget _buildShiftDetails(Map<String, dynamic> shift) {
-    // Helper function to safely get values with multiple key options
-    String getValue(List<String> keys) {
-      for (var key in keys) {
-        if (shift.containsKey(key) && shift[key] != null) {
-          final value = shift[key].toString().trim();
-          if (value.isNotEmpty && value != 'null') {
-            return value;
-          }
+    String getNestedValue(String parent, List<String> keys) {
+      if (shift[parent] is Map<String, dynamic>) {
+        final m = shift[parent];
+        for (final k in keys) {
+          final val = m[k]?.toString();
+          if (val != null && val != 'null') return val;
         }
       }
       return 'N/A';
     }
 
-    // Helper function to get nested values
-    String getNestedValue(String parentKey, List<String> childKeys) {
-      if (shift.containsKey(parentKey) && shift[parentKey] is Map<String, dynamic>) {
-        final parentObj = shift[parentKey] as Map<String, dynamic>;
-        for (var key in childKeys) {
-          if (parentObj.containsKey(key) && parentObj[key] != null) {
-            final value = parentObj[key].toString().trim();
-            if (value.isNotEmpty && value != 'null') {
-              return value;
-            }
-          }
-        }
+    String getVal(List<String> keys) {
+      for (var k in keys) {
+        final val = shift[k]?.toString();
+        if (val != null && val != 'null') return val;
       }
       return 'N/A';
     }
 
-    // Extract main shift information
-    final shiftId = getValue(['shiftId', 'ShiftId', 'id', 'Id', 'shiftNumber', 'ShiftNumber']);
-    final routeNo = getValue(['routeNo', 'RouteNo', 'busRoute', 'BusRoute', 'routeName', 'RouteName']);
-    final numberPlate = getValue(['numberPlate', 'NumberPlate', 'busNumberPlate', 'BusNumberPlate']);
-
-    // Get the display route name (route number + route name if available)
-    final displayRouteName = _getDisplayRouteName(routeNo != 'N/A' ? routeNo : null);
-
-    // Extract normal direction details
+    final routeNo = getVal(['routeNo', 'RouteNo', 'busRoute', 'BusRoute']);
+    final displayRouteName = _getDisplayRouteName(routeNo);
     final normalStartTime = getNestedValue('normal', ['startTime', 'StartTime']);
     final normalEndTime = getNestedValue('normal', ['endTime', 'EndTime']);
     final normalDate = getNestedValue('normal', ['date', 'Date']);
 
-    // Extract reverse direction details
-    final reverseStartTime = getNestedValue('reverse', ['startTime', 'StartTime']);
-    final reverseEndTime = getNestedValue('reverse', ['endTime', 'EndTime']);
-    final reverseDate = getNestedValue('reverse', ['date', 'Date']);
-
-    // Fallback for when data might be at root level
-    final fallbackStartTime = getValue(['startTime', 'StartTime', 'departureTime', 'DepartureTime']);
-    final fallbackEndTime = getValue(['endTime', 'EndTime', 'arrivalTime', 'ArrivalTime']);
-    final fallbackDate = getValue(['date', 'Date', 'shiftDate', 'ShiftDate']);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-            shiftId != 'N/A' ? 'Shift: $shiftId' : 'Bus Shift',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
-        ),
-        const SizedBox(height: 4),
-        if (displayRouteName != 'N/A') _detailLine("Route:", displayRouteName),
-        if (numberPlate != 'N/A') _detailLine("Bus:", numberPlate),
-
-        // Show normal direction if available
-        if (normalStartTime != 'N/A' || normalEndTime != 'N/A' || normalDate != 'N/A') ...[
-          const SizedBox(height: 8),
-          const Text(
-              'Normal Direction:',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFFFB9933))
-          ),
-          if (normalDate != 'N/A') _detailLine("Date:", normalDate),
-          if (normalStartTime != 'N/A') _detailLine("Start:", normalStartTime),
-          if (normalEndTime != 'N/A') _detailLine("End:", normalEndTime),
-        ],
-
-        // Show reverse direction if available
-        if (reverseStartTime != 'N/A' || reverseEndTime != 'N/A' || reverseDate != 'N/A') ...[
-          const SizedBox(height: 8),
-          const Text(
-              'Reverse Direction:',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFFFB9933))
-          ),
-          if (reverseDate != 'N/A') _detailLine("Date:", reverseDate),
-          if (reverseStartTime != 'N/A') _detailLine("Start:", reverseStartTime),
-          if (reverseEndTime != 'N/A') _detailLine("End:", reverseEndTime),
-        ],
-
-        // Show fallback data if no normal/reverse structure found
-        if (normalStartTime == 'N/A' && reverseStartTime == 'N/A' &&
-            (fallbackStartTime != 'N/A' || fallbackEndTime != 'N/A' || fallbackDate != 'N/A')) ...[
-          const SizedBox(height: 4),
-          if (fallbackDate != 'N/A') _detailLine("Date:", fallbackDate),
-          if (fallbackStartTime != 'N/A') _detailLine("Start Time:", fallbackStartTime),
-          if (fallbackEndTime != 'N/A') _detailLine("End Time:", fallbackEndTime),
-        ],
+        Text(displayRouteName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFFFB9933))),
+        if (normalDate != 'N/A') _detailLine("Date:", normalDate),
+        if (normalStartTime != 'N/A') _detailLine("Start:", normalStartTime),
+        if (normalEndTime != 'N/A') _detailLine("End:", normalEndTime),
       ],
     );
   }
 
-  Widget _detailLine(String label, String? value) {
+  Widget _detailLine(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: RichText(
@@ -412,7 +307,7 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
           style: const TextStyle(color: Colors.black, fontSize: 13.5),
           children: [
             TextSpan(text: "$label ", style: const TextStyle(fontWeight: FontWeight.bold)),
-            TextSpan(text: value ?? "N/A"),
+            TextSpan(text: value),
           ],
         ),
       ),
@@ -420,6 +315,9 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
   }
 
   Widget _buildBottomNavBar(BuildContext context) {
+    final icons = [Icons.home, Icons.location_on_outlined, Icons.notifications_none, Icons.grid_view];
+    final routes = ['/dashboard', 'live-map', 'notification', 'more'];
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -429,37 +327,14 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: List.generate(4, (index) {
-          IconData icon;
-          switch (index) {
-            case 0:
-              icon = Icons.home;
-              break;
-            case 1:
-              icon = Icons.location_on_outlined;
-              break;
-            case 2:
-              icon = Icons.notifications_none;
-              break;
-            case 3:
-              icon = Icons.grid_view;
-              break;
-            default:
-              icon = Icons.help_outline;
-          }
-
           return GestureDetector(
-            onTap: () {
-              final routes = ['/dashboard', 'live-map', 'notification', 'more'];
-              Navigator.pushNamedAndRemoveUntil(context, routes[index], (route) => false);
-            },
+            onTap: () => Navigator.pushNamedAndRemoveUntil(context, routes[index], (r) => false),
             child: Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 4))],
-              ),
-              child: Icon(icon, color: const Color(0xFFCF4602)),
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white, boxShadow: [
+                BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 4))
+              ]),
+              child: Icon(icons[index], color: const Color(0xFFCF4602)),
             ),
           );
         }),
