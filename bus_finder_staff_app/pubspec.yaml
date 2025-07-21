@@ -1,5 +1,5 @@
 name: bus_finder_staff_app
-description: "A new Flutter project."
+description: "Bus Finder Staff app."
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
@@ -31,9 +31,14 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  flutter_launcher_icons: ^0.13.1
 
   flutter_lints: ^6.0.0
 
+flutter_icons:
+  android: true
+  ios : false
+  image_path: "assets/images/Staff.png"
 
 flutter:
   uses-material-design: true
@@ -41,8 +46,10 @@ flutter:
     - assets/images/logo_staff.png
     - assets/images/logo.png
     - assets/images/sample_map.jpeg
+    - assets/images/Staff.png
 
   fonts:
     - family: Roboto
       fonts:
         - asset: assets/fonts/Roboto-Regular.ttf
+
