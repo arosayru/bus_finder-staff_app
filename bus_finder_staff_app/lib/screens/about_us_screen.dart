@@ -9,9 +9,11 @@ class AboutUsScreen extends StatefulWidget {
 }
 
 class _AboutUsScreenState extends State<AboutUsScreen> {
-  final String _fullText = '''Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. 
+  final String _fullText = '''We are a group of passionate second-year students from the National Institute of Business Management (NIBM), currently pursuing our Bachelor’s Degree in Software Engineering. As part of our academic journey, we have taken the initiative to develop the Bus Finder application as our final year project. 
 
-It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.''';
+Our goal is to deliver a smart and user-friendly transportation solution that improves the public bus experience in Sri Lanka, especially for foreign travelers. Through this project, we aim to apply the skills and knowledge we've gained during our studies to solve real-world problems with practical and innovative software solutions.
+
+We are committed to continuously improving this platform and hope it brings convenience, safety, and efficiency to everyone who uses public transport in Sri Lanka.''';
 
   String _displayedText = '';
   int _charIndex = 0;

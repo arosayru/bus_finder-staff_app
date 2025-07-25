@@ -290,11 +290,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       color: _isConnected ? Colors.green : Colors.red,
                       border: !_isConnected ? Border.all(color: Colors.white, width: 1) : null,
                     ),
-                    child: Icon(
-                      _isConnected ? Icons.wifi : Icons.wifi_off,
-                      color: Colors.white,
-                      size: 16,
-                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -319,7 +314,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               spacing: 8,
               children: [
                 _buildFilterButton('All', 'all'),
-                _buildFilterButton('Emergency', 'emergency'),
                 _buildFilterButton('Shift', 'shift'),
                 _buildFilterButton('Feedback', 'feedback'),
               ],
@@ -549,15 +543,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     switch (type.toLowerCase()) {
       case 'feedback':
         return 'Passenger Feedback';
-      case 'emergency':
-        return 'Emergency Alert';
+
       case 'shift_assign':
       case 'shift_assignment':
         return 'Shift Assignment';
-      case 'starts':
-        return 'Shift Started';
-      case 'ends':
-        return 'Shift Ended';
       default:
         return 'Notification';
     }
@@ -567,12 +556,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     switch (type.toLowerCase()) {
       case 'feedback':
         return Icons.feedback;
-      case 'emergency':
-        return Icons.warning;
       case 'shift_assign':
       case 'shift_assignment':
-      case 'starts':
-      case 'ends':
         return Icons.schedule;
       case 'general':
       default:
@@ -581,30 +566,76 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildBottomNavBar(BuildContext context) {
-    final icons = [Icons.home, Icons.location_on_outlined, Icons.notifications_none, Icons.grid_view];
-    final routes = ['/dashboard', 'live-map', 'notification', 'more'];
-
     return Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          boxShadow: [BoxShadow(color: Colors.black26, offset: Offset(0, -5), blurRadius: 6)],
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
-        child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(4, (index) {
-              return GestureDetector(
-                onTap: () => Navigator.pushNamedAndRemoveUntil(context, routes[index], (r) => false),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white, boxShadow: [
-                    BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 4))
-                  ]),
-                  child: Icon(icons[index], color: const Color(0xFFCF4602)),
-                ),
-              );
-            }),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(color: Colors.black26, offset: Offset(0, -5), blurRadius: 6),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(4, (index) {
+          IconData icon;
+          switch (index) {
+            case 0:
+              icon = Icons.home;
+              break;
+            case 1:
+              icon = Icons.location_on_outlined;
+              break;
+            case 2:
+              icon = Icons.notifications_none;
+              break;
+            case 3:
+              icon = Icons.grid_view;
+              break;
+            default:
+              icon = Icons.help_outline;
+          }
+
+          final isSelected = index == currentIndex;
+
+          return GestureDetector(
+            onTap: () {
+              if (index == 0) {
+                Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
+              } else if (index == 1) {
+                Navigator.pushNamedAndRemoveUntil(context, 'live-map', (route) => false);
+              } else if (index == 3) {
+                Navigator.pushNamed(context, 'more');
+              }
+
+            },
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: isSelected
+                    ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomLeft,
+                  stops: [0.0, 0.1, 0.5, 0.9, 1.0],
+                  colors: [
+                    Color(0xFFBD2D01),
+                    Color(0xFFCF4602),
+                    Color(0xFFF67F00),
+                    Color(0xFFCF4602),
+                    Color(0xFFBD2D01),
+                  ],
+                )
+                    : null,
+                color: isSelected ? null : Colors.white,
+                boxShadow: const [
+                  BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 4)),
+                ],
+              ),
+              child: Icon(icon, color: isSelected ? Colors.white : const Color(0xFFCF4602)),
             ),
-        );
-    }
+          );
+        }),
+      ),
+    );
+  }
 }

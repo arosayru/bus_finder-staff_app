@@ -15,7 +15,9 @@ class _BusCapacityScreenState extends State<BusCapacityScreen> {
   bool? _hasAvailableSeats; // null = not set, true = available, false = full
   bool _isLoadingAvailable = false; // Separate loading state for available button
   bool _isLoadingFull = false; // Separate loading state for full button
+  bool _isLoadingBusDetails = true; // Loading state for initial bus details
   String? _cachedNumberPlate; // Cache the number plate
+  String? _errorMessage; // Error message if loading fails
 
   static const String baseUrl = "https://bus-finder-sl-a7c6a549fbb1.herokuapp.com";
 
@@ -27,6 +29,11 @@ class _BusCapacityScreenState extends State<BusCapacityScreen> {
 
   // Load bus details using the same logic as SOS implementation
   Future<void> _loadBusDetails() async {
+    setState(() {
+      _isLoadingBusDetails = true;
+      _errorMessage = null;
+    });
+
     try {
       print('=== LOADING BUS DETAILS FOR CAPACITY ===');
 
@@ -36,6 +43,10 @@ class _BusCapacityScreenState extends State<BusCapacityScreen> {
 
       if (email == null || email.isEmpty || email == 'N/A') {
         print('DEBUG: No staff email found');
+        setState(() {
+          _isLoadingBusDetails = false;
+          _errorMessage = 'Unable to retrieve staff information';
+        });
         return;
       }
 
@@ -45,6 +56,10 @@ class _BusCapacityScreenState extends State<BusCapacityScreen> {
 
       if (staffId == null || staffId.isEmpty) {
         print('DEBUG: Failed to get staff ID for email: $email');
+        setState(() {
+          _isLoadingBusDetails = false;
+          _errorMessage = 'Unable to retrieve staff details';
+        });
         return;
       }
 
@@ -55,6 +70,8 @@ class _BusCapacityScreenState extends State<BusCapacityScreen> {
       if (busDetails != null && busDetails['numberPlate'] != null) {
         setState(() {
           _cachedNumberPlate = busDetails['numberPlate'];
+          _isLoadingBusDetails = false;
+          _errorMessage = null;
         });
         print('DEBUG: ✅ Successfully cached number plate: $_cachedNumberPlate');
         print('DEBUG: Number plate is ready for capacity functionality');
@@ -63,9 +80,17 @@ class _BusCapacityScreenState extends State<BusCapacityScreen> {
         await _loadCurrentCapacityStatus();
       } else {
         print('DEBUG: ❌ Failed to get number plate from bus details');
+        setState(() {
+          _isLoadingBusDetails = false;
+          _errorMessage = 'Unable to retrieve bus information';
+        });
       }
     } catch (e) {
       print('DEBUG: ❌ Error loading bus details: $e');
+      setState(() {
+        _isLoadingBusDetails = false;
+        _errorMessage = 'Error loading bus details. Please try again.';
+      });
     }
   }
 
@@ -357,6 +382,11 @@ class _BusCapacityScreenState extends State<BusCapacityScreen> {
     }
   }
 
+  // Retry loading bus details
+  void _retryLoadBusDetails() {
+    _loadBusDetails();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -387,218 +417,275 @@ class _BusCapacityScreenState extends State<BusCapacityScreen> {
             ),
           ),
 
-          const SizedBox(height: 40),
-
-          // Debug info (remove this in production)
-          if (_cachedNumberPlate != null)
-            Container(
-              padding: const EdgeInsets.all(10),
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
-              ),
-              child: Text(
-                'Debug: Bus $_cachedNumberPlate ready for capacity update',
-                style: TextStyle(
-                  color: Colors.blue.shade700,
-                  fontSize: 12,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
-          if (_cachedNumberPlate == null)
-            Container(
-              padding: const EdgeInsets.all(10),
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.shade200),
-              ),
-              child: Text(
-                'Debug: Loading bus information...',
-                style: TextStyle(
-                  color: Colors.red.shade700,
-                  fontSize: 12,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
-          const SizedBox(height: 40),
-
-          // Current Status Display
-          if (_hasAvailableSeats != null)
-            Container(
-              padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                color: _hasAvailableSeats! ? Colors.green.shade50 : Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _hasAvailableSeats! ? Colors.green.shade200 : Colors.orange.shade200,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    _hasAvailableSeats! ? Icons.event_seat : Icons.airline_seat_individual_suite,
-                    color: _hasAvailableSeats! ? Colors.green.shade700 : Colors.orange.shade700,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Current Status: ${_hasAvailableSeats! ? "Available Seats" : "Fully Loaded"}',
-                    style: TextStyle(
-                      color: _hasAvailableSeats! ? Colors.green.shade700 : Colors.orange.shade700,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+          // Loading State
+          if (_isLoadingBusDetails)
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFB9933)),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Loading bus details...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Please wait while we fetch your bus information',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-            ),
+            )
 
-          const SizedBox(height: 40),
+          // Error State
+          else if (_errorMessage != null)
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Colors.red.shade400,
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Unable to Load Bus Details',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red.shade700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 30),
+                      ElevatedButton(
+                        onPressed: _retryLoadBusDetails,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFB9933),
+                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Retry',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
 
-          // Capacity Buttons
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30),
+          // Main Content (when data is loaded)
+          else
+            Expanded(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Available Seats Button
-                  GestureDetector(
-                    onTap: (_isLoadingAvailable || _isLoadingFull) ? null : () => _handleCapacityPress(true),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: double.infinity,
-                      height: 120,
+                  const SizedBox(height: 40),
+
+                  // Current Status Display
+                  if (_hasAvailableSeats != null)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
                       decoration: BoxDecoration(
-                        color: _hasAvailableSeats == true
-                            ? const Color(0xFF2E7D32) // Darker green when selected
-                            : const Color(0xFF4CAF50), // Regular green
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: _hasAvailableSeats == true ? 12 : 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: _isLoadingAvailable
-                          ? const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        color: _hasAvailableSeats! ? Colors.green.shade50 : Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _hasAvailableSeats! ? Colors.green.shade200 : Colors.orange.shade200,
                         ),
-                      )
-                          : Column(
+                      ),
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.event_seat,
-                            color: Colors.white,
-                            size: _hasAvailableSeats == true ? 36 : 32,
+                            _hasAvailableSeats! ? Icons.event_seat : Icons.airline_seat_individual_suite,
+                            color: _hasAvailableSeats! ? Colors.green.shade700 : Colors.orange.shade700,
+                            size: 24,
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(width: 12),
                           Text(
-                            "Bus Has Available Seats",
+                            'Current Status: ${_hasAvailableSeats! ? "Available Seats" : "Fully Loaded"}',
                             style: TextStyle(
-                              color: Colors.white,
-                              fontSize: _hasAvailableSeats == true ? 18 : 16,
-                              fontWeight: FontWeight.bold,
+                              color: _hasAvailableSeats! ? Colors.green.shade700 : Colors.orange.shade700,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
-                            textAlign: TextAlign.center,
                           ),
-                          if (_hasAvailableSeats == true) ...[
-                            const SizedBox(height: 4),
-                            const Text(
-                              "SELECTED",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                        ],
+                      ),
+                    ),
+
+                  const SizedBox(height: 40),
+
+                  // Capacity Buttons
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 30),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Available Seats Button
+                          GestureDetector(
+                            onTap: (_isLoadingAvailable || _isLoadingFull) ? null : () => _handleCapacityPress(true),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: double.infinity,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                color: _hasAvailableSeats == true
+                                    ? const Color(0xFF2E7D32) // Darker green when selected
+                                    : const Color(0xFF4CAF50), // Regular green
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: _hasAvailableSeats == true ? 12 : 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: _isLoadingAvailable
+                                  ? const Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                                  : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.event_seat,
+                                    color: Colors.white,
+                                    size: _hasAvailableSeats == true ? 36 : 32,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    "Bus Has Available Seats",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: _hasAvailableSeats == true ? 18 : 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  if (_hasAvailableSeats == true) ...[
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      "SELECTED",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
-                          ],
+                          ),
+
+                          const SizedBox(height: 30),
+
+                          // Fully Loaded Button
+                          GestureDetector(
+                            onTap: (_isLoadingAvailable || _isLoadingFull) ? null : () => _handleCapacityPress(false),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: double.infinity,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                color: _hasAvailableSeats == false
+                                    ? const Color(0xFFE65100) // Darker orange when selected
+                                    : const Color(0xFFFF9800), // Regular orange
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: _hasAvailableSeats == false ? 12 : 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: _isLoadingFull
+                                  ? const Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                                  : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.people,
+                                    color: Colors.white,
+                                    size: _hasAvailableSeats == false ? 36 : 32,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    "Bus is Fully Loaded",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: _hasAvailableSeats == false ? 18 : 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  if (_hasAvailableSeats == false) ...[
+                                    const SizedBox(height: 4),
+                                    const Text(
+                                      "SELECTED",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 30),
-
-                  // Fully Loaded Button
-                  GestureDetector(
-                    onTap: (_isLoadingAvailable || _isLoadingFull) ? null : () => _handleCapacityPress(false),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: double.infinity,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        color: _hasAvailableSeats == false
-                            ? const Color(0xFFE65100) // Darker orange when selected
-                            : const Color(0xFFFF9800), // Regular orange
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: _hasAvailableSeats == false ? 12 : 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: _isLoadingFull
-                          ? const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                          : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.people,
-                            color: Colors.white,
-                            size: _hasAvailableSeats == false ? 36 : 32,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "Bus is Fully Loaded",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: _hasAvailableSeats == false ? 18 : 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          if (_hasAvailableSeats == false) ...[
-                            const SizedBox(height: 4),
-                            const Text(
-                              "SELECTED",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
-          ),
-
-          const SizedBox(height: 20),
         ],
       ),
 

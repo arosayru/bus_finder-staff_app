@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:signalr_netcore/signalr_client.dart';
 import 'package:signalr_netcore/ihub_protocol.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class NotificationModel {
   final String id;
@@ -135,9 +136,19 @@ class NotificationService {
   List<NotificationModel> get notifications => List.unmodifiable(_notifications);
   bool get isConnected => _isConnected;
 
-  // Configuration - Updated URL to match the working version
+  // Configuration
   static const String _hubUrl = 'https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/notificationhub';
+  static const String _baseApiUrl = 'https://bus-finder-sl-a7c6a549fbb1.herokuapp.com/api';
   static const String _notificationsKey = 'notifications';
+
+  // Shift message types that require filtering
+  final Set<String> _shiftMessageTypes = {
+    "ShiftCreated",
+    "ShiftUpdated",
+    "ShiftDeleted",
+    "NormalShiftRemoved",
+    "ReverseShiftRemoved"
+  };
 
   Future<void> initialize({String? staffId}) async {
     print('🚀 NotificationService: Starting initialization...');
@@ -154,7 +165,7 @@ class NotificationService {
       // Load cached notifications
       await _loadCachedNotifications();
 
-      // Initialize SignalR connection with improved method
+      // Initialize SignalR connection
       await _initializeSignalR();
 
       print('✅ NotificationService: Initialized successfully for staff: $_currentStaffId');
@@ -210,7 +221,6 @@ class NotificationService {
     };
   }
 
-  // Improved SignalR initialization method from the second code
   Future<void> _initializeSignalR() async {
     if (_isConnecting || _isConnected) {
       print('⏳ NotificationService: SignalR already connecting or connected');
@@ -221,21 +231,18 @@ class NotificationService {
     _isConnecting = true;
 
     try {
-      // Create connection exactly like the working version
       final httpConnectionOptions = HttpConnectionOptions(
-        skipNegotiation: true, // IMPORTANT: Same as React
-        transport: HttpTransportType.WebSockets, // IMPORTANT: Same as React
-        logMessageContent: true, // Enable for debugging
+        skipNegotiation: true,
+        transport: HttpTransportType.WebSockets,
+        logMessageContent: true,
       );
 
-      // Add auth header if token is available
       if (_userToken != null && _userToken!.isNotEmpty) {
         httpConnectionOptions.headers = MessageHeaders();
         httpConnectionOptions.headers!.setHeaderValue("Authorization", "Bearer $_userToken");
         print('🔐 NotificationService: Added Authorization header');
       }
 
-      // Build connection like working version
       _hubConnection = HubConnectionBuilder()
           .withUrl(_hubUrl, options: httpConnectionOptions)
           .withAutomaticReconnect(retryDelays: [0, 2000, 10000, 30000])
@@ -243,11 +250,9 @@ class NotificationService {
 
       print('🏗 NotificationService: HubConnection built successfully');
 
-      // Set up event handlers BEFORE starting connection
       _setupSignalRHandlers();
       print('📡 NotificationService: Event handlers set up');
 
-      // Start connection
       print('🚀 NotificationService: Starting SignalR connection to: $_hubUrl');
       await _hubConnection!.start();
 
@@ -257,19 +262,15 @@ class NotificationService {
 
       print('✅ NotificationService: SignalR connected successfully!');
 
-
     } catch (e) {
       _isConnecting = false;
       _isConnected = false;
       _updateConnectionStatus(false);
       print('❌ NotificationService: SignalR connection error: $e');
-      print('🔍 NotificationService: Connection details - URL: $_hubUrl');
-      print('🔍 NotificationService: Connection state: ${_hubConnection?.state}');
       rethrow;
     }
   }
 
-  // Enhanced SignalR event handlers matching the working version
   void _setupSignalRHandlers() {
     print('📡 NotificationService: Setting up SignalR event handlers...');
 
@@ -278,15 +279,8 @@ class NotificationService {
       return;
     }
 
-    // Listen for BusSOS (emergency) - exact same as working version
-    _hubConnection!.on("BusSOS", (arguments) {
-      print('🚨 NotificationService: Received BusSOS notification: $arguments');
-      if (arguments != null && arguments.isNotEmpty) {
-        _handleEmergencyNotification(arguments[0]);
-      }
-    });
-
-    // Listen for FeedbackReceived - exact same as working version
+    // Listen for FeedbackReceived
+    // ✅ Feedback
     _hubConnection!.on("FeedbackReceived", (arguments) {
       print('💬 NotificationService: Received FeedbackReceived notification: $arguments');
       if (arguments != null && arguments.isNotEmpty) {
@@ -294,43 +288,73 @@ class NotificationService {
       }
     });
 
-    // Listen for ShiftStarted - exact same as working version
-    _hubConnection!.on("ShiftStarted", (arguments) {
-      print('▶ NotificationService: Received ShiftStarted notification: $arguments');
+    // Listen for BusAdded notifications
+    _hubConnection!.on("BusAdded", (arguments) {
+      print('🚌 NotificationService: Received BusAdded notification: $arguments');
       if (arguments != null && arguments.isNotEmpty) {
-        _handleShiftStartedNotification(arguments[0]);
+        _handleFilteredNotification(arguments[0].toString(), "BusAdded");
       }
     });
 
-    // Listen for ShiftInterval - exact same as working version
-    _hubConnection!.on("ShiftInterval", (arguments) {
-      print('⏸ NotificationService: Received ShiftInterval notification: $arguments');
+
+    // Listen for ShiftCreated notifications
+    _hubConnection!.on("ShiftCreated", (arguments) {
+      print('📅 NotificationService: Received ShiftCreated notification: $arguments');
       if (arguments != null && arguments.isNotEmpty) {
-        _handleShiftIntervalNotification(arguments[0]);
+        _handleFilteredNotification(arguments[0].toString(), "ShiftCreated");
       }
     });
 
-    // Listen for ShiftEnded - exact same as working version
-    _hubConnection!.on("ShiftEnded", (arguments) {
-      print('⏹ NotificationService: Received ShiftEnded notification: $arguments');
+    _hubConnection!.on("ShiftUpdated", (arguments) {
+      print('📅 NotificationService: Received ShiftUpdated notification: $arguments');
       if (arguments != null && arguments.isNotEmpty) {
-        _handleShiftEndedNotification(arguments[0]);
+        _handleFilteredNotification(arguments[0].toString(), "ShiftUpdated");
       }
     });
+
+    _hubConnection!.on("ShiftDeleted", (arguments) {
+      print('📅 NotificationService: Received ShiftDeleted notification: $arguments');
+      if (arguments != null && arguments.isNotEmpty) {
+        _handleFilteredNotification(arguments[0].toString(), "ShiftDeleted");
+      }
+    });
+
+    _hubConnection!.on("NormalShiftRemoved", (arguments) {
+      print('📅 NotificationService: Received NormalShiftRemoved notification: $arguments');
+      if (arguments != null && arguments.isNotEmpty) {
+        _handleFilteredNotification(arguments[0].toString(), "NormalShiftRemoved");
+      }
+    });
+
+    _hubConnection!.on("ReverseShiftRemoved", (arguments) {
+      print('📅 NotificationService: Received ReverseShiftRemoved notification: $arguments');
+      if (arguments != null && arguments.isNotEmpty) {
+        _handleFilteredNotification(arguments[0].toString(), "ReverseShiftRemoved");
+      }
+    });
+
+
+    // Listen for FeedbackReplied notifications
+    _hubConnection!.on("FeedbackReplied", (arguments) {
+      print('💬 NotificationService: Received FeedbackReplied notification: $arguments');
+      if (arguments != null && arguments.isNotEmpty) {
+        _handleFilteredNotification(arguments[0].toString(), "FeedbackReplied");
+      }
+    });
+
+
 
     // Keep original generic handlers for backward compatibility
     _hubConnection!.on('ReceiveNotification', (List<Object?>? arguments) {
-      if (arguments != null && arguments.isNotEmpty) {
+      if (arguments != null && arguments.length >= 2) {
         try {
-          final data = arguments[0];
-          if (data is Map<String, dynamic>) {
-            _handleNewNotification(data);
-          } else if (data is String) {
-            final jsonData = json.decode(data);
-            _handleNewNotification(jsonData);
-          }
+          final String message = arguments[0] as String;
+          final String type = arguments[1] as String;
+
+          print('📬 NotificationService: Received ReceiveNotification - Type: $type, Message: $message');
+          _handleFilteredNotification(message, type);
         } catch (e) {
-          print('⚠ NotificationService: Error handling generic notification: $e');
+          print('⚠ NotificationService: Error handling ReceiveNotification: $e');
         }
       }
     });
@@ -368,7 +392,6 @@ class NotificationService {
       _isConnected = true;
       _updateConnectionStatus(true);
       print('✅ NotificationService: SignalR reconnected with ID: $connectionId');
-      // Rejoin staff group after reconnection
       if (_currentStaffId != null) {
         _hubConnection!.invoke('JoinStaffGroup', args: [?_currentStaffId]);
       }
@@ -377,22 +400,319 @@ class NotificationService {
     print('✅ NotificationService: All event handlers set up successfully');
   }
 
-  // Handle emergency notification (BusSOS)
-  void _handleEmergencyNotification(dynamic message) {
-    print('🚨 NotificationService: Processing emergency notification...');
+  // New method to handle filtered notifications based on type
+  Future<void> _handleFilteredNotification(String message, String type) async {
+    print('🔍 NotificationService: Processing filtered notification - Type: $type');
+
     try {
+      switch (type) {
+        case "BusAdded":
+          final shouldShow = await _shouldShowBusAddedNotification(message);
+          if (shouldShow) {
+            _createAndAddNotification(
+              title: "Bus Assignment",
+              description: message,
+              type: "bus_added",
+              message: message,
+            );
+          }
+          break;
+
+          case "ShiftCreated":
+          case "ShiftUpdated":
+          case "ShiftDeleted":
+          case "NormalShiftRemoved":
+          case "ReverseShiftRemoved":
+          bool shouldShow = false;
+      try {
+      shouldShow = await _shouldShowShiftNotification(message);
+      } catch (_) {
+      shouldShow = false;
+      }
+
+      // Always notify, even if user is not assigned
+      _createAndAddNotification(
+      title: _getShiftNotificationTitle(type),
+      description: message,
+      type: "shift",
+      message: message,
+      );
+      break;
+
+        case "FeedbackReplied":
+          final feedbackDetails = await _handleFeedbackReplied(message);
+          if (feedbackDetails != null) {
+            _createAndAddNotification(
+              title: "Feedback Reply",
+              description: feedbackDetails,
+              type: "feedback",
+              message: message,
+            );
+          }
+          break;
+
+        default:
+        // Handle unknown types as generic notifications
+          _createAndAddNotification(
+            title: "Notification",
+            description: message,
+            type: type.toLowerCase(),
+            message: message,
+          );
+          break;
+      }
+    } catch (e) {
+      print('❌ NotificationService: Error processing filtered notification: $e');
+      // Fallback: create generic notification
+      _createAndAddNotification(
+        title: "Notification",
+        description: message,
+        type: type.toLowerCase(),
+        message: message,
+      );
+    }
+  }
+
+  // Helper method to create and add notification
+  void _createAndAddNotification({
+    required String title,
+    required String description,
+    required String type,
+    required String message,
+    String routeNo = "",
+    String subject = "",
+  }) {
+    final dateTime = _getCurrentDateTime();
+    final notification = NotificationModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: title,
+      description: description,
+      routeNo: routeNo,
+      date: dateTime['date']!,
+      time: dateTime['time']!,
+      type: type,
+      isRead: false,
+      staffId: _currentStaffId ?? '',
+      subject: subject,
+      message: message,
+    );
+
+    _addNotification(notification);
+  }
+
+  // Check if bus added notification should be shown
+  Future<bool> _shouldShowBusAddedNotification(String message) async {
+    try {
+      // Extract number plate from message: "You have been added to the bus {bus.NumberPlate}."
+      final RegExp reg = RegExp(r'You have been added to the bus ([A-Z]{2}\s*-\s*\d{4})');
+      final match = reg.firstMatch(message);
+      if (match == null) {
+        print('⚠ NotificationService: Could not extract number plate from message: $message');
+        return false;
+      }
+
+      final plate = match.group(1);
+      if (plate == null) return false;
+
+      print('🔍 NotificationService: Checking bus assignment for plate: $plate');
+      return await _isUserOnBus(plate);
+    } catch (e) {
+      print('❌ NotificationService: Error checking bus added notification: $e');
+      return false;
+    }
+  }
+
+  // Check if shift notification should be shown
+  Future<bool> _shouldShowShiftNotification(String message) async {
+    try {
+      // Extract shift ID from message: "A new shift has been created: shift_1753458855154"
+      final match = RegExp(r'(shift_\d+)').firstMatch(message);
+      if (match == null) {
+        print('⚠ NotificationService: Could not extract shift ID from message: $message');
+        return false;
+      }
+
+      final shiftId = match.group(1);
+      if (shiftId == null) return false;
+
+      print('🔍 NotificationService: Checking shift assignment for shift: $shiftId');
+
+      // Get shift details
+      final url = '$_baseApiUrl/BusShift/$shiftId';
+      print('🔍 NotificationService: Calling shift API: $url');
+
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode != 200) {
+        print('❌ NotificationService: Failed to get shift details: ${response.statusCode} - ${response.body}');
+        return false;
+      }
+
+      final shiftData = json.decode(response.body);
+      print('🔍 NotificationService: Shift data received: $shiftData');
+
+      final numberPlate = shiftData['numberPlate'];
+      if (numberPlate == null) {
+        print('⚠ NotificationService: No number plate found in shift data');
+        return false;
+      }
+
+      print('🔍 NotificationService: Checking if user is on bus: $numberPlate');
+      return await _isUserOnBus(numberPlate);
+    } catch (e) {
+      print('❌ NotificationService: Error checking shift notification: $e');
+      return false;
+    }
+  }
+
+  // Check if user is assigned to a specific bus
+  Future<bool> _isUserOnBus(String numberPlate) async {
+    try {
+      // URL encode the number plate (replace spaces with %20)
+      final formattedPlate = numberPlate.replaceAll(' ', '%20');
+      final busUrl = '$_baseApiUrl/Bus/$formattedPlate';
+
+      print('🔍 NotificationService: Calling bus API: $busUrl');
+      final busResponse = await http.get(Uri.parse(busUrl));
+
+      if (busResponse.statusCode != 200) {
+        print('❌ NotificationService: Failed to get bus details: ${busResponse.statusCode}');
+        return false;
+      }
+
+      final data = json.decode(busResponse.body);
+      final driverId = data['driverId'];
+      final conductorId = data['conductorId'];
+
+      print('🔍 NotificationService: Bus data - Driver: $driverId, Conductor: $conductorId, Current Staff: $_currentStaffId');
+
+      final isAssigned = _currentStaffId == driverId || _currentStaffId == conductorId;
+      print('✅ NotificationService: User assignment check result: $isAssigned');
+
+      return isAssigned;
+    } catch (e) {
+      print('❌ NotificationService: Error checking user bus assignment: $e');
+      return false;
+    }
+  }
+
+  // Handle feedback replied notification
+  Future<String?> _handleFeedbackReplied(String message) async {
+    try {
+      // Extract passenger ID and subject from message:
+      // "Feedback from Passenger {feedback.PassengerId} has been replied: {feedback.Subject}"
+      final match = RegExp(
+          r'Feedback from Passenger ([\w\d]+) has been replied: (.+)$'
+      ).firstMatch(message);
+
+      if (match == null) {
+        print('⚠ NotificationService: Could not extract feedback details from message: $message');
+        return null;
+      }
+
+      final passengerId = match.group(1);
+      final subject = match.group(2);
+
+      if (passengerId == null || subject == null) return null;
+
+      print('🔍 NotificationService: Looking for feedback - Passenger: $passengerId, Subject: $subject');
+
+      // Get all feedback
+      final url = '$_baseApiUrl/Feedback';
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode != 200) {
+        print('❌ NotificationService: Failed to get feedback list: ${response.statusCode}');
+        return null;
+      }
+
+      final List<dynamic> feedbacks = json.decode(response.body);
+
+      // Find matching feedback
+      final feedback = feedbacks.firstWhere(
+            (f) => f['passengerId'] == passengerId && f['subject'] == subject,
+        orElse: () => null,
+      );
+
+      if (feedback == null) {
+        print('⚠ NotificationService: No matching feedback found');
+        return null;
+      }
+
+      print('✅ NotificationService: Found matching feedback');
+
+      // Format the display message
+      return '''Feedback Received:
+Subject: ${feedback['subject']}
+Message: ${feedback['message']}
+Reply: ${feedback['reply']}''';
+
+    } catch (e) {
+      print('❌ NotificationService: Error handling feedback replied: $e');
+      return null;
+    }
+  }
+
+  // Get clean shift message based on type
+  String _getCleanShiftMessage(String type) {
+    switch (type) {
+      case "ShiftCreated":
+        return "A new shift has been created.";
+      case "ShiftUpdated":
+        return "A shift has been updated.";
+      case "ShiftDeleted":
+        return "A shift has been deleted.";
+      case "NormalShiftRemoved":
+        return "A normal shift has been removed.";
+      case "ReverseShiftRemoved":
+        return "A reverse shift has been removed.";
+      default:
+        return "Shift update received.";
+    }
+  }
+
+  // Get shift notification title based on type
+  String _getShiftNotificationTitle(String type) {
+    switch (type) {
+      case "ShiftCreated":
+        return "New Shift Created";
+      case "ShiftUpdated":
+        return "Shift Updated";
+      case "ShiftDeleted":
+        return "Shift Deleted";
+      case "NormalShiftRemoved":
+        return "Normal Shift Removed";
+      case "ReverseShiftRemoved":
+        return "Reverse Shift Removed";
+      default:
+        return "Shift Notification";
+    }
+  }
+
+  // Handle emergency notification with self-notification prevention
+  void _handleEmergencyNotificationWithFilter(dynamic message) async {
+    print('🚨 NotificationService: Processing emergency notification with filter...');
+    try {
+      final messageStr = message?.toString() ?? '';
+
+      // Check if this SOS is from the current user to prevent self-notification
+      if (await _isSelfSOS(messageStr)) {
+        print('🚫 NotificationService: Ignoring self SOS notification');
+        return;
+      }
+
       final dateTime = _getCurrentDateTime();
       final notification = NotificationModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: "SOS Alert",
-        description: message?.toString() ?? "Emergency alert received",
+        description: messageStr.isEmpty ? "Emergency alert received" : messageStr,
         routeNo: "Emergency",
         date: dateTime['date']!,
         time: dateTime['time']!,
         type: "emergency",
         isRead: false,
         staffId: _currentStaffId ?? '',
-        message: message!.toString(),
+        message: messageStr,
       );
 
       _addNotification(notification);
@@ -402,13 +722,47 @@ class NotificationService {
     }
   }
 
-  // Handle feedback notification
+  // Check if SOS notification is from current user
+  Future<bool> _isSelfSOS(String message) async {
+    try {
+      // You can implement different logic here based on how SOS messages are structured
+      // For example, if SOS messages contain staff ID or bus number plate
+
+      // Method 1: If message contains staff ID
+      if (message.contains(_currentStaffId ?? '')) {
+        return true;
+      }
+
+      // Method 2: If message contains bus number plate, check if current user is on that bus
+      final RegExp plateRegex = RegExp(r'([A-Z]{2}\s*-\s*\d{4})');
+      final match = plateRegex.firstMatch(message);
+      if (match != null) {
+        final plate = match.group(1);
+        if (plate != null) {
+          // Check if current user is on this bus
+          final isOnBus = await _isUserOnBus(plate);
+          if (isOnBus) {
+            print('🔍 NotificationService: SOS from own bus detected');
+            return true;
+          }
+        }
+      }
+
+      // Method 3: Check recent SOS activity (if you track when user sends SOS)
+      // You could store timestamp when user sends SOS and ignore notifications within a time window
+
+      return false;
+    } catch (e) {
+      print('❌ NotificationService: Error checking self SOS: $e');
+      return false; // When in doubt, show the notification for safety
+    }
+  }
+
   void _handleFeedbackNotification(dynamic message) {
     print('💬 NotificationService: Processing feedback notification...');
     try {
       final dateTime = _getCurrentDateTime();
 
-      // Extract feedback text
       String feedbackText = "Feedback received";
       if (message is String) {
         if (message.contains(':')) {
@@ -431,7 +785,7 @@ class NotificationService {
         isRead: false,
         staffId: _currentStaffId ?? '',
         subject: feedbackText,
-        message: message!.toString(),
+        message: message.toString(),
       );
 
       _addNotification(notification);
@@ -441,7 +795,6 @@ class NotificationService {
     }
   }
 
-  // Handle shift started notification
   void _handleShiftStartedNotification(dynamic message) {
     print('▶ NotificationService: Processing shift started notification...');
     try {
@@ -456,7 +809,7 @@ class NotificationService {
         type: "starts",
         isRead: false,
         staffId: _currentStaffId ?? '',
-        message: message!.toString(),
+        message: message.toString(),
       );
 
       _addNotification(notification);
@@ -466,7 +819,6 @@ class NotificationService {
     }
   }
 
-  // Handle shift interval notification
   void _handleShiftIntervalNotification(dynamic message) {
     print('⏸ NotificationService: Processing shift interval notification...');
     try {
@@ -481,7 +833,7 @@ class NotificationService {
         type: "starts",
         isRead: false,
         staffId: _currentStaffId ?? '',
-        message: message!.toString(),
+        message: message.toString(),
       );
 
       _addNotification(notification);
@@ -491,7 +843,6 @@ class NotificationService {
     }
   }
 
-  // Handle shift ended notification
   void _handleShiftEndedNotification(dynamic message) {
     print('⏹ NotificationService: Processing shift ended notification...');
     try {
@@ -506,7 +857,7 @@ class NotificationService {
         type: "ends",
         isRead: false,
         staffId: _currentStaffId ?? '',
-        message: message!.toString(),
+        message: message.toString(),
       );
 
       _addNotification(notification);
@@ -516,10 +867,8 @@ class NotificationService {
     }
   }
 
-  // Original generic notification handler
   void _handleNewNotification(Map<String, dynamic> data) {
     try {
-      // Create notification model
       final notification = NotificationModel.fromJson({
         ...data,
         'staffId': _currentStaffId ?? '',
@@ -534,7 +883,6 @@ class NotificationService {
     }
   }
 
-  // Add notification to list and emit events
   void _addNotification(NotificationModel notification) {
     print('📝 NotificationService: Adding new notification: ${notification.title}');
     _notifications.insert(0, notification);
@@ -556,7 +904,6 @@ class NotificationService {
             .where((notification) => notification.staffId == _currentStaffId)
             .toList();
 
-        // Sort by timestamp
         _notifications.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
         _notificationListController.add(List.from(_notifications));

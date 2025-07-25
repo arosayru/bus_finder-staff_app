@@ -15,6 +15,7 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
   List<bool> expanded = [];
   bool isLoading = true;
   String? errorMessage;
+  bool noShiftsAssigned = false;
 
   static const String baseUrl = 'https://bus-finder-sl-a7c6a549fbb1.herokuapp.com';
 
@@ -29,6 +30,7 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
       setState(() {
         isLoading = true;
         errorMessage = null;
+        noShiftsAssigned = false;
       });
 
       // First get the route numbers from user's shifts (same as ShiftTrackerScreen)
@@ -37,6 +39,17 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
       final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
 
       final shifts = await MapService.getFutureBusShifts(date: dateStr, time: timeStr);
+
+      // Check if shifts is null or empty
+      if (shifts == null || shifts.isEmpty) {
+        setState(() {
+          routes = [];
+          expanded = [];
+          noShiftsAssigned = true;
+          isLoading = false;
+        });
+        return;
+      }
 
       // Extract unique route numbers from shifts
       Set<String> routeNumbers = {};
@@ -47,11 +60,12 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
         }
       }
 
-      // If no route numbers found from shifts, show empty state
+      // If no route numbers found from shifts, show no routes state
       if (routeNumbers.isEmpty) {
         setState(() {
           routes = [];
           expanded = [];
+          noShiftsAssigned = true;
           isLoading = false;
         });
         return;
@@ -71,24 +85,42 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
         routes = fetchedRoutes;
         expanded = List.filled(routes.length, false);
         isLoading = false;
+        // If we couldn't fetch any route details despite having route numbers
+        if (fetchedRoutes.isEmpty && routeNumbers.isNotEmpty) {
+          noShiftsAssigned = true;
+        }
       });
     } catch (e) {
       setState(() {
-        errorMessage = e.toString();
+        // Check if the error is specifically about no shifts assigned
+        if (e.toString().toLowerCase().contains('no shift') ||
+            e.toString().toLowerCase().contains('not assigned') ||
+            e.toString().toLowerCase().contains('empty') ||
+            e.toString().toLowerCase().contains('404')) {
+          noShiftsAssigned = true;
+          errorMessage = null;
+        } else {
+          errorMessage = e.toString();
+          noShiftsAssigned = false;
+        }
+        routes = [];
+        expanded = [];
         isLoading = false;
       });
     }
   }
 
   // Same method as in ShiftTrackerScreen to extract route number
-  String? _getRouteNumber(Map<String, dynamic> shift) {
+  String? _getRouteNumber(Map<String, dynamic>? shift) {
+    if (shift == null) return null;
+
     final routeNo = shift['routeNo']?.toString() ??
         shift['RouteNo']?.toString() ??
         shift['busRoute']?.toString() ??
         shift['BusRoute']?.toString() ??
         shift['routeName']?.toString() ??
         shift['RouteName']?.toString();
-    return (routeNo != null && routeNo != 'null') ? routeNo.trim() : null;
+    return (routeNo != null && routeNo != 'null' && routeNo.trim().isNotEmpty) ? routeNo.trim() : null;
   }
 
   Future<Map<String, dynamic>?> _getRouteDetailsByNumber(String routeNumber) async {
@@ -123,7 +155,21 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
     }
   }
 
-  Map<String, dynamic> _parseRouteData(Map<String, dynamic> data, String routeNumber) {
+  Map<String, dynamic> _parseRouteData(Map<String, dynamic>? data, String routeNumber) {
+    if (data == null) {
+      return {
+        'number': 'No. $routeNumber',
+        'routeNumber': routeNumber,
+        'routeName': 'N/A',
+        'travelTime': 'N/A',
+        'distance': 'N/A',
+        'departureTime': 'N/A',
+        'arrivalTime': 'N/A',
+        'stops': <String>[],
+        'stopCount': 0,
+      };
+    }
+
     // Helper function to safely get string values from different possible key formats
     String getStringValue(List<String> possibleKeys) {
       for (String key in possibleKeys) {
@@ -140,7 +186,7 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
       for (String key in possibleKeys) {
         final value = data[key];
         if (value is List) {
-          return value.map((stop) => stop.toString()).where((stop) => stop.isNotEmpty).toList();
+          return value.map((stop) => stop?.toString() ?? '').where((stop) => stop.isNotEmpty).toList();
         } else if (value is String && value.isNotEmpty && value != 'null') {
           // If stops are comma-separated string
           return value.split(',').map((stop) => stop.trim()).where((stop) => stop.isNotEmpty).toList();
@@ -337,26 +383,52 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFB9933),
               ),
-              child: const Text('Retry'),
+              child: const Text('Retry', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
       );
     }
 
-    if (routes.isEmpty) {
-      return const Center(
+    if (noShiftsAssigned || routes.isEmpty) {
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.route, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(
-              'No routes available',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            const Icon(Icons.route_outlined, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text(
+              'No Routes to Manage',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey),
             ),
-            SizedBox(height: 8),
-            Text('No routes found in your assigned shifts'),
+            const SizedBox(height: 8),
+            const Text(
+              'You don\'t have any shifts assigned,',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'so there are no routes to manage at the moment.',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Please contact your supervisor for shift assignments.',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _loadRoutes,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFB9933),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              label: const Text('Check Again', style: TextStyle(color: Colors.white)),
+            ),
           ],
         ),
       );
@@ -367,7 +439,7 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
       itemCount: routes.length,
       itemBuilder: (context, index) {
         final route = routes[index];
-        final isOpen = expanded[index];
+        final isOpen = index < expanded.length ? expanded[index] : false;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -402,7 +474,7 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          route['number'],
+                          route['number'] ?? 'N/A',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -410,14 +482,14 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        _buildDetailLine('Route Name:', route['routeName']),
+                        _buildDetailLine('Route Name:', route['routeName'] ?? 'N/A'),
 
                         // Show distance if available
-                        if (route['distance'] != 'N/A')
+                        if (route['distance'] != null && route['distance'] != 'N/A')
                           _buildDetailLine('Distance:', route['distance']),
 
                         // Show travel time if available
-                        if (route['travelTime'] != 'N/A')
+                        if (route['travelTime'] != null && route['travelTime'] != 'N/A')
                           _buildDetailLine('Travel Time:', route['travelTime']),
 
                         // Show number of stops
@@ -425,9 +497,9 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
                           _buildDetailLine('Total Stops:', '${route['stopCount']} stops'),
 
                         // Show departure/arrival times if available
-                        if (route['departureTime'] != 'N/A')
+                        if (route['departureTime'] != null && route['departureTime'] != 'N/A')
                           _buildDetailLine('Departure Time:', route['departureTime']),
-                        if (route['arrivalTime'] != 'N/A')
+                        if (route['arrivalTime'] != null && route['arrivalTime'] != 'N/A')
                           _buildDetailLine('Arrival Time:', route['arrivalTime']),
                       ],
                     ),
@@ -435,6 +507,10 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
                   GestureDetector(
                     onTap: () {
                       setState(() {
+                        // Ensure expanded list is long enough
+                        if (expanded.length <= index) {
+                          expanded = List.filled(routes.length, false);
+                        }
                         expanded[index] = !expanded[index];
                       });
                     },
@@ -455,7 +531,7 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
                 const Divider(color: Colors.grey, height: 1),
                 const SizedBox(height: 12),
 
-                if (route['stops'].isNotEmpty) ...[
+                if (route['stops'] != null && route['stops'].isNotEmpty) ...[
                   Row(
                     children: [
                       const Icon(Icons.route, color: Color(0xFFFB9933), size: 18),
@@ -533,7 +609,7 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
                             child: Padding(
                               padding: const EdgeInsets.only(top: 1, bottom: 4),
                               child: Text(
-                                route['stops'][i],
+                                route['stops'][i]?.toString() ?? 'Unknown Stop',
                                 style: TextStyle(
                                   fontSize: 13.5,
                                   fontWeight: isFirst || isLast
@@ -606,7 +682,7 @@ class _RouteManagementScreenState extends State<RouteManagementScreen> {
               text: "$label ",
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            TextSpan(text: value),
+            TextSpan(text: value ?? 'N/A'),
           ],
         ),
       ),

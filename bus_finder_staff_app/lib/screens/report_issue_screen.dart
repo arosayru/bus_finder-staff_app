@@ -14,8 +14,10 @@ class ReportIssueScreen extends StatefulWidget {
 class _ReportIssueScreenState extends State<ReportIssueScreen> {
   bool _isSOSActive = false;
   bool _isLoading = false;
+  bool _isLoadingBusDetails = true; // Loading state for initial bus details
   Timer? _sosTimer;
   String? _cachedNumberPlate; // Cache the number plate
+  String? _errorMessage; // Error message if loading fails
 
   static const String baseUrl = "https://bus-finder-sl-a7c6a549fbb1.herokuapp.com";
 
@@ -33,6 +35,11 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
   // Load bus details using the same logic as MapService
   Future<void> _loadBusDetails() async {
+    setState(() {
+      _isLoadingBusDetails = true;
+      _errorMessage = null;
+    });
+
     try {
       print('=== LOADING BUS DETAILS ===');
 
@@ -42,6 +49,10 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
       if (email == null || email.isEmpty || email == 'N/A') {
         print('DEBUG: No staff email found');
+        setState(() {
+          _isLoadingBusDetails = false;
+          _errorMessage = 'Unable to retrieve staff information';
+        });
         return;
       }
 
@@ -51,6 +62,10 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
       if (staffId == null || staffId.isEmpty) {
         print('DEBUG: Failed to get staff ID for email: $email');
+        setState(() {
+          _isLoadingBusDetails = false;
+          _errorMessage = 'Unable to retrieve staff details';
+        });
         return;
       }
 
@@ -61,14 +76,24 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
       if (busDetails != null && busDetails['numberPlate'] != null) {
         setState(() {
           _cachedNumberPlate = busDetails['numberPlate'];
+          _isLoadingBusDetails = false;
+          _errorMessage = null;
         });
         print('DEBUG: ✅ Successfully cached number plate: $_cachedNumberPlate');
         print('DEBUG: Number plate is ready for SOS functionality');
       } else {
         print('DEBUG: ❌ Failed to get number plate from bus details');
+        setState(() {
+          _isLoadingBusDetails = false;
+          _errorMessage = 'Unable to retrieve bus information';
+        });
       }
     } catch (e) {
       print('DEBUG: ❌ Error loading bus details: $e');
+      setState(() {
+        _isLoadingBusDetails = false;
+        _errorMessage = 'Error loading bus details. Please try again.';
+      });
     }
   }
 
@@ -388,6 +413,11 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     }
   }
 
+  // Retry loading bus details
+  void _retryLoadBusDetails() {
+    _loadBusDetails();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -418,129 +448,186 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             ),
           ),
 
-          const Spacer(),
-
-          // Debug info (remove this in production)
-          if (_cachedNumberPlate != null)
-            Container(
-              padding: const EdgeInsets.all(10),
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
-              ),
-              child: Text(
-                'Debug: Bus $_cachedNumberPlate ready for SOS',
-                style: TextStyle(
-                  color: Colors.blue.shade700,
-                  fontSize: 12,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
-          if (_cachedNumberPlate == null)
-            Container(
-              padding: const EdgeInsets.all(10),
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.shade200),
-              ),
-              child: Text(
-                'Debug: Loading bus information...',
-                style: TextStyle(
-                  color: Colors.red.shade700,
-                  fontSize: 12,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
-          const SizedBox(height: 20),
-
-          // SOS Button
-          Center(
-            child: GestureDetector(
-              onTap: _isLoading ? null : _handleSOSPress,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  color: _isSOSActive
-                      ? const Color(0xFF8B0000) // Darker red when active
-                      : const Color(0xFFBD2D01), // Original red
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: _isSOSActive ? 20 : 15,
-                      offset: const Offset(4, 6),
+          // Loading State
+          if (_isLoadingBusDetails)
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFB9933)),
                     ),
-                    BoxShadow(
-                      color: _isSOSActive
-                          ? const Color(0xFF5A5A5A)
-                          : const Color(0xFF7E7573),
-                      blurRadius: _isSOSActive ? 12 : 8,
-                      offset: const Offset(-4, -4),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Loading bus details...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Please wait while we prepare the SOS system',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
-                alignment: Alignment.center,
-                child: _isLoading
-                    ? const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                )
-                    : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "SOS",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: _isSOSActive ? 36 : 32,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Roboto',
+              ),
+            )
+
+          // Error State
+          else if (_errorMessage != null)
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Colors.red.shade400,
                       ),
-                    ),
-                    if (_isSOSActive) ...[
-                      const SizedBox(height: 8),
-                      const Text(
-                        "ACTIVE",
+                      const SizedBox(height: 20),
+                      Text(
+                        'Unable to Load Bus Details',
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red.shade700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 30),
+                      ElevatedButton(
+                        onPressed: _retryLoadBusDetails,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFB9933),
+                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Retry',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            )
 
-          const SizedBox(height: 20),
+          // Main SOS Content (when data is loaded)
+          else
+            Expanded(
+              child: Column(
+                children: [
+                  const Spacer(),
 
-          // Status text
-          if (_isSOSActive)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                "SOS Alert is ACTIVE for bus $_cachedNumberPlate\nWill auto-deactivate in 20 seconds",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.red.shade700,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
+                  // SOS Button
+                  Center(
+                    child: GestureDetector(
+                      onTap: _isLoading ? null : _handleSOSPress,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          color: _isSOSActive
+                              ? const Color(0xFF8B0000) // Darker red when active
+                              : const Color(0xFFBD2D01), // Original red
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: _isSOSActive ? 20 : 15,
+                              offset: const Offset(4, 6),
+                            ),
+                            BoxShadow(
+                              color: _isSOSActive
+                                  ? const Color(0xFF5A5A5A)
+                                  : const Color(0xFF7E7573),
+                              blurRadius: _isSOSActive ? 12 : 8,
+                              offset: const Offset(-4, -4),
+                            ),
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
+                            : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "SOS",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: _isSOSActive ? 36 : 32,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Roboto',
+                              ),
+                            ),
+                            if (_isSOSActive) ...[
+                              const SizedBox(height: 8),
+                              const Text(
+                                "ACTIVE",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Status text
+                  if (_isSOSActive && _cachedNumberPlate != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        "SOS Alert is ACTIVE for bus $_cachedNumberPlate\nWill auto-deactivate in 20 seconds",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+
+                  const Spacer(flex: 2),
+                ],
               ),
             ),
-
-          const Spacer(flex: 2),
         ],
       ),
 

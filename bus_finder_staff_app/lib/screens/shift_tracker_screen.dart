@@ -16,6 +16,7 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
   Map<String, String> routeNames = {};
   bool isLoading = true;
   String? errorMessage;
+  bool noShiftsAssigned = false;
 
   static const String baseUrl = 'https://bus-finder-sl-a7c6a549fbb1.herokuapp.com';
 
@@ -30,6 +31,7 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
       setState(() {
         isLoading = true;
         errorMessage = null;
+        noShiftsAssigned = false;
       });
 
       final now = DateTime.now();
@@ -37,6 +39,17 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
       final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
 
       final shifts = await MapService.getFutureBusShifts(date: dateStr, time: timeStr);
+
+      // Check if shifts is null or empty
+      if (shifts == null || shifts.isEmpty) {
+        setState(() {
+          futureShifts = [];
+          noShiftsAssigned = true;
+          isLoading = false;
+        });
+        return;
+      }
+
       await _loadRouteNamesForShifts(shifts);
 
       setState(() {
@@ -45,7 +58,18 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
       });
     } catch (e) {
       setState(() {
-        errorMessage = e.toString();
+        // Check if the error is specifically about no shifts assigned
+        if (e.toString().toLowerCase().contains('no shift') ||
+            e.toString().toLowerCase().contains('not assigned') ||
+            e.toString().toLowerCase().contains('empty') ||
+            e.toString().toLowerCase().contains('404')) {
+          noShiftsAssigned = true;
+          errorMessage = null;
+        } else {
+          errorMessage = e.toString();
+          noShiftsAssigned = false;
+        }
+        futureShifts = [];
         isLoading = false;
       });
     }
@@ -167,23 +191,46 @@ class _ShiftTrackerScreenState extends State<ShiftTrackerScreen> {
             ElevatedButton(
               onPressed: _loadFutureShifts,
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFB9933)),
-              child: const Text('Retry'),
+              child: const Text('Retry', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
       );
     }
 
-    if (futureShifts.isEmpty) {
-      return const Center(
+    if (noShiftsAssigned || futureShifts.isEmpty) {
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.schedule, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('No future shifts available', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
-            Text('Check back later for upcoming shifts'),
+            const Icon(Icons.assignment_outlined, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text(
+                'No Shift Assigned Yet',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey)
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'You don\'t have any shifts assigned at the moment.',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Please contact your supervisor or check back later.',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _loadFutureShifts,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFB9933),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              label: const Text('Check Again', style: TextStyle(color: Colors.white)),
+            ),
           ],
         ),
       );
